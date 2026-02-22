@@ -1,0 +1,18 @@
+const express = require('express');
+const {
+  getMine,
+  markRead,
+  markAllRead,
+  getUnreadCount,
+} = require('../controllers/notificationController');
+const { protect } = require('../middleware/auth');
+
+const router = express.Router();
+router.use(protect);
+
+router.get('/', getMine);
+router.get('/unread-count', getUnreadCount);
+router.put('/:id/read', markRead);
+router.put('/read-all', markAllRead);
+
+module.exports = router;
