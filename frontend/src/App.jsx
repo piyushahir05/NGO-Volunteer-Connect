@@ -1,17 +1,18 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './context/AuthContext';
-import Layout from './components/Layout';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import VolunteerDashboard from './pages/VolunteerDashboard';
-import NGODashboard from './pages/NGODashboard';
-import Opportunities from './pages/Opportunities';
-import VolunteerProfile from './pages/VolunteerProfile';
-import MyApplications from './pages/MyApplications';
-import NGOProfile from './pages/NGOProfile';
-import NGOEvents from './pages/NGOEvents';
-import EventApplicants from './pages/EventApplicants';
+import React from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useAuth } from "./context/AuthContext";
+import Home from "./pages/Home";
+import Layout from "./components/Layout";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import VolunteerDashboard from "./pages/VolunteerDashboard";
+import NGODashboard from "./pages/NGODashboard";
+import Opportunities from "./pages/Opportunities";
+import VolunteerProfile from "./pages/VolunteerProfile";
+import MyApplications from "./pages/MyApplications";
+import NGOProfile from "./pages/NGOProfile";
+import NGOEvents from "./pages/NGOEvents";
+import EventApplicants from "./pages/EventApplicants";
 
 function ProtectedRoute({ children, allowedRoles }) {
   const { user, loading } = useAuth();
@@ -24,7 +25,9 @@ function ProtectedRoute({ children, allowedRoles }) {
   }
   if (!user) return <Navigate to="/login" replace />;
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to={user.role === 'NGO' ? '/ngo' : '/volunteer'} replace />;
+    return (
+      <Navigate to={user.role === "NGO" ? "/ngo" : "/volunteer"} replace />
+    );
   }
   return children;
 }
@@ -39,7 +42,9 @@ function PublicRoute({ children }) {
     );
   }
   if (user) {
-    return <Navigate to={user.role === 'NGO' ? '/ngo' : '/volunteer'} replace />;
+    return (
+      <Navigate to={user.role === "NGO" ? "/ngo" : "/volunteer"} replace />
+    );
   }
   return children;
 }
@@ -47,70 +52,107 @@ function PublicRoute({ children }) {
 export default function App() {
   return (
     <Routes>
-      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-      <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route
+        path="/login"
+        element={
+          <PublicRoute>
+            <Login />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <PublicRoute>
+            <Register />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/"
+        element={
+          <PublicRoute>
+            <Home />
+          </PublicRoute>
+        }
+      />
       <Route
         path="/volunteer"
         element={
-          <ProtectedRoute allowedRoles={['Volunteer']}>
-            <Layout><VolunteerDashboard /></Layout>
+          <ProtectedRoute allowedRoles={["Volunteer"]}>
+            <Layout>
+              <VolunteerDashboard />
+            </Layout>
           </ProtectedRoute>
         }
       />
       <Route
         path="/volunteer/profile"
         element={
-          <ProtectedRoute allowedRoles={['Volunteer']}>
-            <Layout><VolunteerProfile /></Layout>
+          <ProtectedRoute allowedRoles={["Volunteer"]}>
+            <Layout>
+              <VolunteerProfile />
+            </Layout>
           </ProtectedRoute>
         }
       />
       <Route
         path="/volunteer/opportunities"
         element={
-          <ProtectedRoute allowedRoles={['Volunteer']}>
-            <Layout><Opportunities /></Layout>
+          <ProtectedRoute allowedRoles={["Volunteer"]}>
+            <Layout>
+              <Opportunities />
+            </Layout>
           </ProtectedRoute>
         }
       />
       <Route
         path="/volunteer/applications"
         element={
-          <ProtectedRoute allowedRoles={['Volunteer']}>
-            <Layout><MyApplications /></Layout>
+          <ProtectedRoute allowedRoles={["Volunteer"]}>
+            <Layout>
+              <MyApplications />
+            </Layout>
           </ProtectedRoute>
         }
       />
       <Route
         path="/ngo"
         element={
-          <ProtectedRoute allowedRoles={['NGO']}>
-            <Layout><NGODashboard /></Layout>
+          <ProtectedRoute allowedRoles={["NGO"]}>
+            <Layout>
+              <NGODashboard />
+            </Layout>
           </ProtectedRoute>
         }
       />
       <Route
         path="/ngo/profile"
         element={
-          <ProtectedRoute allowedRoles={['NGO']}>
-            <Layout><NGOProfile /></Layout>
+          <ProtectedRoute allowedRoles={["NGO"]}>
+            <Layout>
+              <NGOProfile />
+            </Layout>
           </ProtectedRoute>
         }
       />
       <Route
         path="/ngo/events"
         element={
-          <ProtectedRoute allowedRoles={['NGO']}>
-            <Layout><NGOEvents /></Layout>
+          <ProtectedRoute allowedRoles={["NGO"]}>
+            <Layout>
+              <NGOEvents />
+            </Layout>
           </ProtectedRoute>
         }
       />
       <Route
         path="/ngo/events/:eventId/applicants"
         element={
-          <ProtectedRoute allowedRoles={['NGO']}>
-            <Layout><EventApplicants /></Layout>
+          <ProtectedRoute allowedRoles={["NGO"]}>
+            <Layout>
+              <EventApplicants />
+            </Layout>
           </ProtectedRoute>
         }
       />
