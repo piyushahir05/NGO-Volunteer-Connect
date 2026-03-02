@@ -317,15 +317,6 @@ export default function Home() {
         </div>
       </footer>
 
-      <style>{`
-        @keyframes floatA { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-        @keyframes floatB { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }
-        @keyframes slide { from{transform:translateX(0)} to{transform:translateX(-50%)} }
-        @media (prefers-reduced-motion: reduce) {
-          .motion-reduce\\:animate-none { animation: none !important; }
-          [style*="animation"] { animation: none !important; }
-        }
-      `}</style>
     </div>
   );
 }
