@@ -105,7 +105,6 @@ exports.getDashboardStats = async (req, res, next) => {
       accepted,
       pending,
       rejected,
-      eventsAttended: accepted,
       causesSupported: ngoSet.size,
       applications,
     });

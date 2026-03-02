@@ -99,7 +99,7 @@ export default function VolunteerDashboard() {
   const impactStats = useMemo(() => stats
     ? [
         { label: 'Total Applications', value: String(stats.totalApplications), icon: FileText,  accent: 'emerald' },
-        { label: 'Events Attended',    value: String(stats.eventsAttended),    icon: Calendar,  accent: 'blue' },
+        { label: 'Accepted',           value: String(stats.accepted),          icon: Calendar,  accent: 'blue' },
         { label: 'Causes Supported',   value: String(stats.causesSupported),   icon: Heart,     accent: 'rose' },
         { label: 'Pending Reviews',    value: String(stats.pending),           icon: Clock,     accent: 'amber' },
       ]
@@ -144,7 +144,7 @@ export default function VolunteerDashboard() {
                   Welcome back, <span className="text-emerald-600">{userName}</span> 👋
                 </h1>
                 <p className="text-slate-500 mt-1 max-w-lg">
-                  You've attended <span className="font-semibold text-emerald-600">{stats.eventsAttended} event{stats.eventsAttended !== 1 ? 's' : ''}</span> so far 💚 — keep the momentum going!
+                  You have <span className="font-semibold text-emerald-600">{stats.accepted} accepted application{stats.accepted !== 1 ? 's' : ''}</span> so far 💚 — keep the momentum going!
                 </p>
               </div>
             </div>
