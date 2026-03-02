@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import {
@@ -61,16 +61,16 @@ export default function NGODashboard() {
     return () => { cancelled = true; };
   }, []);
 
-  const kpiCards = stats
+  const kpiCards = useMemo(() => stats
     ? [
         { label: 'Active Events', value: String(stats.activeEvents), icon: CalendarDays, accent: 'emerald' },
         { label: 'Total Volunteers', value: String(stats.totalVolunteers), icon: Users, accent: 'blue' },
         { label: 'Pending Applications', value: String(stats.pendingApplications), icon: ClipboardList, accent: 'amber' },
       ]
-    : [];
+    : [], [stats]);
 
   const events = stats?.events || [];
-  const maxApplicants = Math.max(1, ...events.map((e) => e.totalApplicants));
+  const maxApplicants = useMemo(() => Math.max(1, ...events.map((e) => e.totalApplicants)), [events]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">

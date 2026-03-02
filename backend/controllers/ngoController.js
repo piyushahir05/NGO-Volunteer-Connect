@@ -71,16 +71,24 @@ exports.getDashboardStats = async (req, res, next) => {
 
     const events = opportunities.map((opp) => {
       const applicants = opp.applicants || [];
-      const accepted = applicants.filter((a) => a.status === 'Accepted').length;
       const total = applicants.length;
+      const counts = applicants.reduce(
+        (acc, a) => {
+          if (a.status === 'Accepted') acc.accepted++;
+          else if (a.status === 'Pending') acc.pending++;
+          else if (a.status === 'Rejected') acc.rejected++;
+          return acc;
+        },
+        { accepted: 0, pending: 0, rejected: 0 }
+      );
       return {
         _id: opp._id,
         title: opp.title,
         totalApplicants: total,
-        accepted,
-        pending: applicants.filter((a) => a.status === 'Pending').length,
-        rejected: applicants.filter((a) => a.status === 'Rejected').length,
-        fillRate: total > 0 ? Math.round((accepted / total) * 100) : 0,
+        accepted: counts.accepted,
+        pending: counts.pending,
+        rejected: counts.rejected,
+        fillRate: total > 0 ? Math.round((counts.accepted / total) * 100) : 0,
       };
     });
 
