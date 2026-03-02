@@ -48,3 +48,57 @@ exports.getMyOpportunities = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getDashboardStats = async (req, res, next) => {
+  try {
+    const opportunities = await Opportunity.find({ ngoId: req.user._id })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const activeEvents = opportunities.length;
+
+    const volunteerIds = new Set();
+    let pendingApplications = 0;
+
+    for (const opp of opportunities) {
+      for (const a of opp.applicants || []) {
+        if (a.volunteerId) volunteerIds.add(a.volunteerId.toString());
+        if (a.status === 'Pending') pendingApplications++;
+      }
+    }
+
+    const totalVolunteers = volunteerIds.size;
+
+    const events = opportunities.map((opp) => {
+      const applicants = opp.applicants || [];
+      const total = applicants.length;
+      const counts = applicants.reduce(
+        (acc, a) => {
+          if (a.status === 'Accepted') acc.accepted++;
+          else if (a.status === 'Pending') acc.pending++;
+          else if (a.status === 'Rejected') acc.rejected++;
+          return acc;
+        },
+        { accepted: 0, pending: 0, rejected: 0 }
+      );
+      return {
+        _id: opp._id,
+        title: opp.title,
+        totalApplicants: total,
+        accepted: counts.accepted,
+        pending: counts.pending,
+        rejected: counts.rejected,
+        fillRate: total > 0 ? Math.round((counts.accepted / total) * 100) : 0,
+      };
+    });
+
+    res.json({
+      activeEvents,
+      totalVolunteers,
+      pendingApplications,
+      events,
+    });
+  } catch (err) {
+    next(err);
+  }
+};

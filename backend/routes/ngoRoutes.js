@@ -1,6 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { getProfile, updateProfile, getMyOpportunities } = require('../controllers/ngoController');
+const { getProfile, updateProfile, getMyOpportunities, getDashboardStats } = require('../controllers/ngoController');
 const { protect, role } = require('../middleware/auth');
 
 const router = express.Router();
@@ -16,5 +16,6 @@ router.put(
   updateProfile
 );
 router.get('/opportunities', getMyOpportunities);
+router.get('/dashboard-stats', getDashboardStats);
 
 module.exports = router;
