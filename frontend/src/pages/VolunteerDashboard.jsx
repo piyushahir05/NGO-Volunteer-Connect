@@ -87,15 +87,15 @@ export default function VolunteerDashboard() {
         ))}
       </div>
 
-      {/* AI tip */}
+      {/* tip */}
       <div className="bg-primary-50 border border-primary-200 rounded-2xl p-5 flex items-start gap-4">
         <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center flex-shrink-0">
           <Sparkles size={17} className="text-white" />
         </div>
         <div>
-          <div className="text-sm font-bold text-slate-800 mb-1">Get better matches with AI</div>
+          <div className="text-sm font-bold text-slate-800 mb-1">Get better matches</div>
           <p className="text-sm text-slate-600 leading-relaxed">
-            A complete profile helps our AI find the most relevant opportunities for you.{' '}
+            A complete profile helps us find the most relevant opportunities for you.{' '}
             <Link to="/volunteer/profile" className="text-primary-600 font-semibold hover:underline">Complete your profile →</Link>
           </p>
         </div>

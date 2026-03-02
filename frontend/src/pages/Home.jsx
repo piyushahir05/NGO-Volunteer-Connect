@@ -25,7 +25,7 @@ function useCountUp(target, ms = 1400) {
 const FEATURES = [
   {
     Icon: Brain,
-    title: "AI-Powered Matching",
+    title: "Smart Matching",
     body: "Our engine analyses 40+ skill dimensions to surface the highest-impact pairings between volunteers and NGOs.",
     colorClass: "text-primary-600",
     bgClass: "bg-primary-50",
@@ -48,7 +48,7 @@ const FEATURES = [
 
 const STEPS = [
   { n: "01", title: "Create your profile",  sub: "Skills, availability & passions" },
-  { n: "02", title: "Get matched",           sub: "AI surfaces top opportunities"  },
+  { n: "02", title: "Get matched",           sub: "Surfaces top opportunities"  },
   { n: "03", title: "Collaborate & track",  sub: "Manage hours and impact"         },
 ];
 
@@ -74,7 +74,7 @@ export default function Home() {
               <Heart size={16} className="text-white fill-white" />
             </div>
             <span className="font-display text-lg text-slate-800">
-              VolunteerMatch <span className="text-primary-600">AI</span>
+              VolunteerMatch
             </span>
           </Link>
           <div className="flex items-center gap-3">
@@ -96,7 +96,7 @@ export default function Home() {
         <div>
           <div className="mb-4">
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold">
-              <Sparkles size={11} /> AI-Powered Social Impact
+              <Sparkles size={11} /> Smart Social Impact
             </span>
           </div>
           <h1 className="font-display text-4xl md:text-5xl lg:text-6xl leading-tight tracking-tight text-slate-900 mb-5">
@@ -105,7 +105,7 @@ export default function Home() {
             <span className="text-primary-600">Need Them Most</span>
           </h1>
           <p className="text-base md:text-lg text-slate-500 leading-relaxed max-w-md mb-8">
-            VolunteerMatch AI uses intelligent recommendation to pair passionate people
+            VolunteerMatch uses intelligent recommendation to pair passionate people
             with the NGOs where they'll create real, lasting change.
           </p>
           <div className="flex flex-wrap gap-3 mb-10">
@@ -286,11 +286,11 @@ export default function Home() {
                 <Heart size={13} className="text-white fill-white" />
               </div>
               <span className="font-display text-base text-slate-800">
-                VolunteerMatch <span className="text-primary-600">AI</span>
+                VolunteerMatch
               </span>
             </Link>
             <p className="text-xs text-slate-400 leading-relaxed max-w-xs">
-              Connecting passionate volunteers with impactful NGOs through AI-powered matching.
+              Connecting passionate volunteers with impactful NGOs through smart matching.
             </p>
           </div>
           <div>
@@ -312,7 +312,7 @@ export default function Home() {
         </div>
         <div className="border-t border-slate-100 px-6 py-4">
           <div className="max-w-6xl mx-auto text-center text-xs text-slate-400">
-            © 2026 VolunteerMatch AI · All rights reserved
+            © 2026 VolunteerMatch · All rights reserved
           </div>
         </div>
       </footer>

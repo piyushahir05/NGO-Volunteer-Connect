@@ -93,7 +93,7 @@ export default function VolunteerProfile() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight mb-1">My Profile</h1>
-        <p className="text-slate-500">Keep your profile up to date for better AI-powered opportunity matching.</p>
+        <p className="text-slate-500">Keep your profile up to date for better opportunity matching.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6 items-start">
