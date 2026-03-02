@@ -1,26 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import {
-  Heart, User, Lightbulb, Clock, MapPin,
-  ArrowLeft, CheckCircle, AlertCircle, Save, Tag
+  User, Lightbulb, Clock, MapPin,
+  CheckCircle, AlertCircle, Save, Tag
 } from 'lucide-react';
 
-function useFonts() {
-  useEffect(() => {
-    if (document.getElementById('vm-gf')) return;
-    const l = document.createElement('link');
-    l.id = 'vm-gf';
-    l.rel = 'stylesheet';
-    l.href =
-      'https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap';
-    document.head.appendChild(l);
-  }, []);
-}
-
 export default function VolunteerProfile() {
-  useFonts();
-
   const [profile, setProfile]       = useState({ skills: [], interests: '', availability: '', location: '' });
   const [skillsInput, setSkillsInput] = useState('');
   const [saving, setSaving]         = useState(false);
@@ -58,7 +43,6 @@ export default function VolunteerProfile() {
     }
   };
 
-  /* Derive skill tags for preview */
   const skillTags = skillsInput.split(',').map((s) => s.trim()).filter(Boolean);
 
   const FIELDS = [
@@ -100,258 +84,115 @@ export default function VolunteerProfile() {
     },
   ];
 
+  const fields = [skillsInput, profile.interests, profile.availability, profile.location];
+  const filled = fields.filter(Boolean).length;
+  const pct    = Math.round((filled / fields.length) * 100);
+
   return (
-    <>
-      <style>{`
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-          background: #f9fafb;
-          font-family: 'Lora', Georgia, serif;
-          -webkit-font-smoothing: antialiased;
-          text-rendering: optimizeLegibility;
-          color: #111827;
-        }
+    <div className="max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight mb-1">My Profile</h1>
+        <p className="text-slate-500">Keep your profile up to date for better AI-powered opportunity matching.</p>
+      </div>
 
-        /* ── Nav ── */
-        .nav {
-          background: #fff; border-bottom: 1px solid #e5e7eb;
-          padding: 14px 32px;
-          display: flex; align-items: center; justify-content: space-between;
-          position: sticky; top: 0; z-index: 50;
-        }
-        .nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; }
-        .nav-logo-icon {
-          width: 32px; height: 32px; border-radius: 8px; background: #16a34a;
-          display: flex; align-items: center; justify-content: center;
-        }
-        .nav-logo-text { font-size: 16px; font-weight: 700; color: #111827; letter-spacing: -0.01em; }
-        .nav-logo-text span { color: #16a34a; }
-        .nav-back {
-          display: inline-flex; align-items: center; gap: 6px;
-          font-size: 13.5px; font-weight: 600; color: #6b7280;
-          text-decoration: none;
-          transition: color 0.15s;
-        }
-        .nav-back:hover { color: #16a34a; }
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6 items-start">
 
-        /* ── Page layout ── */
-        .page { max-width: 860px; margin: 0 auto; padding: 40px 24px 64px; }
+        {/* Form */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-8">
+          <form onSubmit={handleSubmit}>
 
-        /* ── Page header ── */
-        .page-header { margin-bottom: 32px; }
-        .page-title { font-size: clamp(1.6rem, 3vw, 2rem); color: #111827; letter-spacing: -0.02em; margin-bottom: 6px; }
-        .page-sub { font-size: 15px; color: #6b7280; line-height: 1.6; }
+            {message && (
+              <div className={`flex items-start gap-2.5 p-3.5 rounded-xl mb-5 text-sm leading-relaxed ${
+                isError ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-primary-50 border border-primary-200 text-primary-700'
+              }`}>
+                {isError
+                  ? <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+                  : <CheckCircle size={16} className="flex-shrink-0 mt-0.5" />
+                }
+                {message}
+              </div>
+            )}
 
-        /* ── Two-column layout ── */
-        .profile-grid {
-          display: grid; grid-template-columns: 1fr 300px; gap: 24px; align-items: start;
-        }
-        @media (max-width: 720px) { .profile-grid { grid-template-columns: 1fr; } }
+            {FIELDS.map((f) => (
+              <div className="mb-5" key={f.key}>
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
+                  <span className="w-6 h-6 rounded-md bg-primary-50 flex items-center justify-center flex-shrink-0">
+                    <f.icon size={13} className="text-primary-600" />
+                  </span>
+                  {f.label}
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 bg-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition"
+                  placeholder={f.placeholder}
+                  value={f.value}
+                  onChange={(e) => f.onChange(e.target.value)}
+                />
+                <p className="text-xs text-slate-400 mt-1.5">{f.hint}</p>
+              </div>
+            ))}
 
-        /* ── Form card ── */
-        .form-card {
-          background: #fff; border: 1.5px solid #e5e7eb; border-radius: 16px; padding: 32px;
-        }
+            <button
+              type="submit"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary-600 text-white font-semibold text-sm hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              disabled={saving}
+            >
+              <Save size={15} />
+              {saving ? 'Saving…' : 'Save Profile'}
+            </button>
 
-        .form-group { margin-bottom: 22px; }
-        .form-label {
-          display: flex; align-items: center; gap: 7px;
-          font-size: 13.5px; font-weight: 600; color: #374151; margin-bottom: 8px;
-        }
-        .form-label-icon {
-          width: 22px; height: 22px; border-radius: 6px; background: #f0fdf4;
-          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-        }
-        .form-input {
-          width: 100%; padding: 11px 14px;
-          border: 1.5px solid #e5e7eb; border-radius: 9px;
-          font-family: 'Lora', Georgia, serif;
-          font-size: 14.5px; color: #111827; background: #fff;
-          outline: none;
-          transition: border-color 0.18s, box-shadow 0.18s;
-        }
-        .form-input::placeholder { color: #c4c4c4; }
-        .form-input:focus {
-          border-color: #16a34a;
-          box-shadow: 0 0 0 3px rgba(22,163,74,0.1);
-        }
-        .form-hint { font-size: 12px; color: #9ca3af; margin-top: 5px; }
-
-        /* ── Alert ── */
-        .alert {
-          display: flex; align-items: flex-start; gap: 10px;
-          padding: 12px 14px; border-radius: 10px; margin-bottom: 22px;
-          font-size: 13.5px; line-height: 1.55;
-        }
-        .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
-        .alert-error   { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
-
-        /* ── Submit button ── */
-        .btn-save {
-          display: inline-flex; align-items: center; gap: 8px;
-          padding: 13px 28px; border-radius: 9px;
-          background: #16a34a; color: #fff;
-          font-family: 'Lora', Georgia, serif;
-          font-size: 15px; font-weight: 600;
-          border: none; cursor: pointer;
-          transition: background 0.18s;
-        }
-        .btn-save:hover:not(:disabled) { background: #15803d; }
-        .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
-
-        /* ── Sidebar cards ── */
-        .sidebar { display: flex; flex-direction: column; gap: 16px; }
-
-        .side-card {
-          background: #fff; border: 1.5px solid #e5e7eb; border-radius: 14px; padding: 22px;
-        }
-        .side-card-title {
-          font-size: 13px; font-weight: 700; color: #111827;
-          margin-bottom: 14px; letter-spacing: -0.01em;
-        }
-
-        /* Skill tags */
-        .skill-tags { display: flex; flex-wrap: wrap; gap: 7px; }
-        .skill-tag {
-          padding: 4px 11px; border-radius: 100px;
-          background: #f0fdf4; border: 1px solid #bbf7d0;
-          color: #15803d; font-size: 12.5px; font-weight: 500;
-        }
-        .skill-empty { font-size: 13px; color: #9ca3af; }
-
-        /* Profile completeness */
-        .completeness-bar-bg {
-          height: 7px; background: #f3f4f6; border-radius: 100px; overflow: hidden; margin: 10px 0;
-        }
-        .completeness-bar-fill {
-          height: 100%; background: #16a34a; border-radius: 100px;
-          transition: width 0.4s ease;
-        }
-        .completeness-label { font-size: 12px; color: #6b7280; }
-
-        /* Tips list */
-        .tip-list { display: flex; flex-direction: column; gap: 10px; }
-        .tip-item { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; color: #4b5563; line-height: 1.6; }
-        .tip-dot  { width: 6px; height: 6px; border-radius: 50%; background: #16a34a; flex-shrink: 0; margin-top: 6px; }
-      `}</style>
-
-      {/* ── Nav ── */}
-      <nav className="nav">
-        <Link to="/" className="nav-logo">
-          <div className="nav-logo-icon">
-            <Heart size={15} color="#fff" fill="#fff" />
-          </div>
-          <span className="nav-logo-text">VolunteerMatch <span>AI</span></span>
-        </Link>
-        <Link to="/volunteer" className="nav-back">
-          <ArrowLeft size={14} /> Back to Dashboard
-        </Link>
-      </nav>
-
-      <div className="page">
-
-        {/* Header */}
-        <div className="page-header">
-          <h1 className="page-title">My Profile</h1>
-          <p className="page-sub">Keep your profile up to date for better AI-powered opportunity matching.</p>
+          </form>
         </div>
 
-        <div className="profile-grid">
+        {/* Sidebar */}
+        <div className="flex flex-col gap-4">
 
-          {/* ── Form ── */}
-          <div className="form-card">
-            <form onSubmit={handleSubmit}>
+          {/* Skills preview */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-5">
+            <div className="text-sm font-bold text-slate-800 mb-3">Skills Preview</div>
+            <div className="flex flex-wrap gap-2">
+              {skillTags.length > 0
+                ? skillTags.map((s) => (
+                    <span key={s} className="px-2.5 py-1 rounded-full bg-primary-50 border border-primary-200 text-primary-700 text-xs font-medium">{s}</span>
+                  ))
+                : <span className="text-sm text-slate-400">No skills added yet.</span>
+              }
+            </div>
+          </div>
 
-              {message && (
-                <div className={`alert ${isError ? 'alert-error' : 'alert-success'}`}>
-                  {isError
-                    ? <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
-                    : <CheckCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
-                  }
-                  {message}
-                </div>
-              )}
+          {/* Profile completeness */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-5">
+            <div className="text-sm font-bold text-slate-800 mb-2">Profile Completeness</div>
+            <div className="h-2 bg-slate-100 rounded-full overflow-hidden my-2.5">
+              <div
+                className="h-full bg-primary-600 rounded-full transition-all duration-500"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <span className="text-xs text-slate-500">{pct}% complete — {filled} of {fields.length} fields filled</span>
+          </div>
 
-              {FIELDS.map((f) => (
-                <div className="form-group" key={f.key}>
-                  <label className="form-label">
-                    <span className="form-label-icon">
-                      <f.icon size={13} color="#16a34a" />
-                    </span>
-                    {f.label}
-                  </label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder={f.placeholder}
-                    value={f.value}
-                    onChange={(e) => f.onChange(e.target.value)}
-                  />
-                  <p className="form-hint">{f.hint}</p>
+          {/* Tips */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-5">
+            <div className="text-sm font-bold text-slate-800 mb-3">Tips for better matches</div>
+            <div className="flex flex-col gap-2.5">
+              {[
+                'Add at least 3 skills to improve match accuracy.',
+                'Be specific with interests — "Wildlife Conservation" beats "Environment".',
+                'Update your availability regularly so NGOs know when to reach you.',
+                'Adding your location unlocks nearby opportunities.',
+              ].map((t) => (
+                <div className="flex items-start gap-2.5 text-sm text-slate-600 leading-relaxed" key={t}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary-600 flex-shrink-0 mt-1.5" />
+                  {t}
                 </div>
               ))}
-
-              <button type="submit" className="btn-save" disabled={saving}>
-                <Save size={15} />
-                {saving ? 'Saving…' : 'Save Profile'}
-              </button>
-
-            </form>
+            </div>
           </div>
 
-          {/* ── Sidebar ── */}
-          <div className="sidebar">
-
-            {/* Skills preview */}
-            <div className="side-card">
-              <div className="side-card-title">Skills Preview</div>
-              <div className="skill-tags">
-                {skillTags.length > 0
-                  ? skillTags.map((s) => (
-                      <span key={s} className="skill-tag">{s}</span>
-                    ))
-                  : <span className="skill-empty">No skills added yet.</span>
-                }
-              </div>
-            </div>
-
-            {/* Profile completeness */}
-            {(() => {
-              const fields = [skillsInput, profile.interests, profile.availability, profile.location];
-              const filled = fields.filter(Boolean).length;
-              const pct    = Math.round((filled / fields.length) * 100);
-              return (
-                <div className="side-card">
-                  <div className="side-card-title">Profile Completeness</div>
-                  <div className="completeness-bar-bg">
-                    <div className="completeness-bar-fill" style={{ width: `${pct}%` }} />
-                  </div>
-                  <span className="completeness-label">{pct}% complete — {filled} of {fields.length} fields filled</span>
-                </div>
-              );
-            })()}
-
-            {/* Tips */}
-            <div className="side-card">
-              <div className="side-card-title">Tips for better matches</div>
-              <div className="tip-list">
-                {[
-                  'Add at least 3 skills to improve match accuracy.',
-                  'Be specific with interests — "Wildlife Conservation" beats "Environment".',
-                  'Update your availability regularly so NGOs know when to reach you.',
-                  'Adding your location unlocks nearby opportunities.',
-                ].map((t) => (
-                  <div className="tip-item" key={t}>
-                    <span className="tip-dot" />
-                    {t}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

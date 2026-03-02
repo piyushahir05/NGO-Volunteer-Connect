@@ -1,5 +1,5 @@
-import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import Home from "./pages/Home";
 import Layout from "./components/Layout";
@@ -49,9 +49,17 @@ function PublicRoute({ children }) {
   return children;
 }
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+}
+
 export default function App() {
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
       <Route
         path="/login"
         element={
@@ -157,5 +165,6 @@ export default function App() {
         }
       />
     </Routes>
+    </>
   );
 }
