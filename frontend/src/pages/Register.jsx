@@ -1,23 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Heart, Mail, Lock, User, ArrowRight, Users, Building2 } from 'lucide-react';
 
-function useFonts() {
-  useEffect(() => {
-    if (document.getElementById('vm-gf')) return;
-    const l = document.createElement('link');
-    l.id = 'vm-gf';
-    l.rel = 'stylesheet';
-    l.href =
-      'https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap';
-    document.head.appendChild(l);
-  }, []);
-}
-
 export default function Register() {
-  useFonts();
-
   const [name, setName]         = useState('');
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -46,348 +32,192 @@ export default function Register() {
   };
 
   return (
-    <>
-      <style>{`
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-          background: #fff;
-          font-family: 'Lora', Georgia, serif;
-          -webkit-font-smoothing: antialiased;
-          text-rendering: optimizeLegibility;
-        }
+    <div className="min-h-screen grid md:grid-cols-2">
 
-        .reg-page {
-          min-height: 100vh;
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-        }
-        @media (max-width: 720px) {
-          .reg-page { grid-template-columns: 1fr; }
-          .reg-left  { display: none; }
-        }
-
-        /* ── Left panel ── */
-        .reg-left {
-          background: #f0fdf4;
-          border-right: 1px solid #e5e7eb;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          padding: 48px;
-        }
-        .left-logo {
-          display: flex; align-items: center; gap: 10px;
-          text-decoration: none;
-        }
-        .left-logo-icon {
-          width: 34px; height: 34px; border-radius: 8px;
-          background: #16a34a;
-          display: flex; align-items: center; justify-content: center;
-        }
-        .left-logo-text {
-          font-size: 17px; font-weight: 700; color: #111827;
-          letter-spacing: -0.01em;
-        }
-        .left-logo-text span { color: #16a34a; }
-
-        .left-body {
-          flex: 1; display: flex; flex-direction: column;
-          justify-content: center; padding: 40px 0;
-        }
-        .left-h {
-          font-size: clamp(1.8rem, 3vw, 2.6rem);
-          color: #111827; line-height: 1.15;
-          letter-spacing: -0.02em; margin-bottom: 18px;
-        }
-        .left-h span { color: #16a34a; }
-        .left-p {
-          font-size: 15.5px; color: #4b5563;
-          line-height: 1.76; max-width: 360px;
-        }
-
-        /* Who can join cards */
-        .join-cards { display: flex; flex-direction: column; gap: 12px; margin-top: 36px; }
-        .join-card {
-          display: flex; align-items: flex-start; gap: 13px;
-          padding: 16px; border-radius: 12px;
-          background: #fff; border: 1.5px solid #e5e7eb;
-        }
-        .join-card-icon {
-          width: 36px; height: 36px; border-radius: 9px;
-          display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0;
-        }
-        .join-card-title { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 3px; }
-        .join-card-sub   { font-size: 12.5px; color: #6b7280; line-height: 1.5; }
-
-        /* ── Right panel ── */
-        .reg-right {
-          display: flex; align-items: center; justify-content: center;
-          padding: 48px 40px;
-          background: #fff;
-          overflow-y: auto;
-        }
-        .reg-box { width: 100%; max-width: 400px; }
-
-        .reg-box-header { margin-bottom: 28px; }
-        .reg-box-title {
-          font-size: 1.75rem; color: #111827;
-          letter-spacing: -0.02em; margin-bottom: 6px;
-        }
-        .reg-box-sub { font-size: 14.5px; color: #6b7280; line-height: 1.6; }
-
-        /* Form */
-        .form-group { margin-bottom: 16px; }
-        .form-label {
-          display: block; font-size: 13.5px; font-weight: 600;
-          color: #374151; margin-bottom: 7px;
-        }
-        .input-wrap { position: relative; }
-        .input-icon {
-          position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
-          color: #9ca3af; pointer-events: none;
-          display: flex; align-items: center;
-        }
-        .form-input {
-          width: 100%; padding: 11px 14px 11px 38px;
-          border: 1.5px solid #e5e7eb; border-radius: 9px;
-          font-family: 'Lora', Georgia, serif;
-          font-size: 14.5px; color: #111827;
-          background: #fff;
-          transition: border-color 0.18s, box-shadow 0.18s;
-          outline: none;
-        }
-        .form-input::placeholder { color: #c4c4c4; }
-        .form-input:focus {
-          border-color: #16a34a;
-          box-shadow: 0 0 0 3px rgba(22,163,74,0.1);
-        }
-
-        /* Role toggle */
-        .role-toggle {
-          display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-        }
-        .role-option { position: relative; }
-        .role-option input[type="radio"] {
-          position: absolute; opacity: 0; width: 0; height: 0;
-        }
-        .role-label {
-          display: flex; align-items: center; gap: 9px;
-          padding: 11px 14px; border-radius: 9px;
-          border: 1.5px solid #e5e7eb; cursor: pointer;
-          transition: border-color 0.18s, background 0.18s;
-          font-size: 14px; font-weight: 500; color: #374151;
-        }
-        .role-label:hover { border-color: #bbf7d0; background: #f9fffe; }
-        .role-option input:checked + .role-label {
-          border-color: #16a34a;
-          background: #f0fdf4;
-          color: #15803d;
-        }
-        .role-icon {
-          width: 28px; height: 28px; border-radius: 7px;
-          display: flex; align-items: center; justify-content: center;
-          background: #f3f4f6; flex-shrink: 0;
-          transition: background 0.18s;
-        }
-        .role-option input:checked + .role-label .role-icon {
-          background: #dcfce7;
-        }
-
-        .error-box {
-          padding: 11px 14px; border-radius: 9px;
-          background: #fef2f2; border: 1px solid #fecaca;
-          color: #b91c1c; font-size: 13.5px; margin-bottom: 16px;
-        }
-
-        .btn-submit {
-          width: 100%; padding: 13px;
-          background: #16a34a; color: #fff;
-          font-family: 'Lora', Georgia, serif;
-          font-size: 15px; font-weight: 600;
-          border: none; border-radius: 9px; cursor: pointer;
-          display: flex; align-items: center; justify-content: center; gap: 7px;
-          transition: background 0.18s;
-          margin-top: 6px;
-        }
-        .btn-submit:hover:not(:disabled) { background: #15803d; }
-        .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
-
-        .form-footer {
-          margin-top: 20px; text-align: center;
-          font-size: 14px; color: #6b7280;
-        }
-        .form-footer a {
-          color: #16a34a; font-weight: 600; text-decoration: none;
-        }
-        .form-footer a:hover { text-decoration: underline; }
-
-        .divider-row {
-          display: flex; align-items: center; gap: 12px;
-          margin: 20px 0;
-        }
-        .divider-line { flex: 1; height: 1px; background: #f3f4f6; }
-        .divider-text { font-size: 12px; color: #d1d5db; letter-spacing: 0.05em; }
-      `}</style>
-
-      <div className="reg-page">
-
-        {/* ── Left panel ── */}
-        <div className="reg-left">
-          <Link to="/" className="left-logo">
-            <div className="left-logo-icon">
-              <Heart size={16} color="#fff" fill="#fff" />
-            </div>
-            <span className="left-logo-text">VolunteerMatch <span>AI</span></span>
-          </Link>
-
-          <div className="left-body">
-            <h2 className="left-h">
-              Start making <br />an <span>impact today.</span>
-            </h2>
-            <p className="left-p">
-              Join a growing community of volunteers and NGOs using AI to connect
-              the right people with the right causes.
-            </p>
-
-            <div className="join-cards">
-              <div className="join-card">
-                <div className="join-card-icon" style={{ background: '#dcfce7' }}>
-                  <Users size={17} color="#16a34a" />
-                </div>
-                <div>
-                  <div className="join-card-title">Volunteers</div>
-                  <div className="join-card-sub">Find causes that match your skills and schedule.</div>
-                </div>
-              </div>
-              <div className="join-card">
-                <div className="join-card-icon" style={{ background: '#dbeafe' }}>
-                  <Building2 size={17} color="#2563eb" />
-                </div>
-                <div>
-                  <div className="join-card-title">NGOs & Organizations</div>
-                  <div className="join-card-sub">Post opportunities and get matched with ideal volunteers.</div>
-                </div>
-              </div>
-            </div>
+      {/* Left panel */}
+      <div className="hidden md:flex flex-col justify-between bg-primary-50 border-r border-slate-200 p-12">
+        <Link to="/" className="flex items-center gap-2.5 no-underline">
+          <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center flex-shrink-0">
+            <Heart size={16} className="text-white fill-white" />
           </div>
+          <span className="text-lg font-bold text-slate-800">
+            VolunteerMatch <span className="text-primary-600">AI</span>
+          </span>
+        </Link>
 
-          <div style={{ fontSize: 12, color: '#9ca3af' }}>
-            Already have an account?{' '}
-            <Link to="/login" style={{ color: '#16a34a', fontWeight: 600, textDecoration: 'none' }}>
-              Sign in
-            </Link>
+        <div className="py-8">
+          <h2 className="text-4xl font-display font-bold text-slate-800 leading-tight tracking-tight mb-4">
+            Start making <br />an <span className="text-primary-600">impact today.</span>
+          </h2>
+          <p className="text-base text-slate-600 leading-relaxed max-w-xs mb-8">
+            Join a growing community of volunteers and NGOs using AI to connect the right people with the right causes.
+          </p>
+
+          <div className="flex flex-col gap-3">
+            <div className="flex items-start gap-3 p-4 bg-white border border-slate-200 rounded-xl">
+              <div className="w-9 h-9 rounded-lg bg-primary-100 flex items-center justify-center flex-shrink-0">
+                <Users size={17} className="text-primary-600" />
+              </div>
+              <div>
+                <div className="text-sm font-bold text-slate-800 mb-0.5">Volunteers</div>
+                <div className="text-xs text-slate-500 leading-relaxed">Find causes that match your skills and schedule.</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-4 bg-white border border-slate-200 rounded-xl">
+              <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <Building2 size={17} className="text-blue-600" />
+              </div>
+              <div>
+                <div className="text-sm font-bold text-slate-800 mb-0.5">NGOs & Organizations</div>
+                <div className="text-xs text-slate-500 leading-relaxed">Post opportunities and get matched with ideal volunteers.</div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* ── Right form panel ── */}
-        <div className="reg-right">
-          <div className="reg-box">
-
-            <div className="reg-box-header">
-              <h1 className="reg-box-title">Create account</h1>
-              <p className="reg-box-sub">Fill in your details to get started.</p>
-            </div>
-
-            <form onSubmit={handleSubmit}>
-              {error && <div className="error-box">{error}</div>}
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="name">Full name</label>
-                <div className="input-wrap">
-                  <span className="input-icon"><User size={15} /></span>
-                  <input
-                    id="name"
-                    type="text"
-                    className="form-input"
-                    placeholder="Your name or organization"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="email">Email address</label>
-                <div className="input-wrap">
-                  <span className="input-icon"><Mail size={15} /></span>
-                  <input
-                    id="email"
-                    type="email"
-                    className="form-input"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="password">Password</label>
-                <div className="input-wrap">
-                  <span className="input-icon"><Lock size={15} /></span>
-                  <input
-                    id="password"
-                    type="password"
-                    className="form-input"
-                    placeholder="At least 6 characters"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    minLength={6}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">I am a</label>
-                <div className="role-toggle">
-                  {['Volunteer', 'NGO'].map((r) => (
-                    <div className="role-option" key={r}>
-                      <input
-                        type="radio"
-                        name="role"
-                        id={`role-${r}`}
-                        value={r}
-                        checked={role === r}
-                        onChange={(e) => setRole(e.target.value)}
-                      />
-                      <label className="role-label" htmlFor={`role-${r}`}>
-                        <div className="role-icon">
-                          {r === 'Volunteer'
-                            ? <Users size={14} color={role === r ? '#16a34a' : '#6b7280'} />
-                            : <Building2 size={14} color={role === r ? '#16a34a' : '#6b7280'} />
-                          }
-                        </div>
-                        {r}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <button type="submit" className="btn-submit" disabled={loading}>
-                {loading ? 'Creating account…' : (<>Create account <ArrowRight size={15} /></>)}
-              </button>
-            </form>
-
-            <div className="divider-row">
-              <div className="divider-line" />
-              <span className="divider-text">OR</span>
-              <div className="divider-line" />
-            </div>
-
-            <p className="form-footer">
-              Already have an account?{' '}
-              <Link to="/login">Sign in</Link>
-            </p>
-
-          </div>
-        </div>
-
+        <p className="text-xs text-slate-400">
+          Already have an account?{' '}
+          <Link to="/login" className="text-primary-600 font-semibold hover:underline">Sign in</Link>
+        </p>
       </div>
-    </>
+
+      {/* Right form panel */}
+      <div className="flex items-center justify-center p-8 md:p-12 bg-white overflow-y-auto">
+        <div className="w-full max-w-sm">
+
+          <div className="mb-7">
+            <h1 className="text-3xl font-bold text-slate-800 tracking-tight mb-1.5">Create account</h1>
+            <p className="text-sm text-slate-500">Fill in your details to get started.</p>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            {error && (
+              <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm mb-4">
+                {error}
+              </div>
+            )}
+
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="name">
+                Full name
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 flex items-center pointer-events-none">
+                  <User size={15} />
+                </span>
+                <input
+                  id="name"
+                  type="text"
+                  className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 bg-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition"
+                  placeholder="Your name or organization"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="email">
+                Email address
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 flex items-center pointer-events-none">
+                  <Mail size={15} />
+                </span>
+                <input
+                  id="email"
+                  type="email"
+                  className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 bg-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="password">
+                Password
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 flex items-center pointer-events-none">
+                  <Lock size={15} />
+                </span>
+                <input
+                  id="password"
+                  type="password"
+                  className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 bg-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition"
+                  placeholder="At least 6 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  minLength={6}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">I am a</label>
+              <div className="grid grid-cols-2 gap-2.5">
+                {['Volunteer', 'NGO'].map((r) => (
+                  <div key={r} className="relative">
+                    <input
+                      type="radio"
+                      name="role"
+                      id={`role-${r}`}
+                      value={r}
+                      checked={role === r}
+                      onChange={(e) => setRole(e.target.value)}
+                      className="absolute opacity-0 w-0 h-0"
+                    />
+                    <label
+                      htmlFor={`role-${r}`}
+                      className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border-2 cursor-pointer transition-all text-sm font-medium ${
+                        role === r
+                          ? 'border-primary-500 bg-primary-50 text-primary-700'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-primary-200'
+                      }`}
+                    >
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
+                        role === r ? 'bg-primary-100' : 'bg-slate-100'
+                      }`}>
+                        {r === 'Volunteer'
+                          ? <Users size={14} className={role === r ? 'text-primary-600' : 'text-slate-500'} />
+                          : <Building2 size={14} className={role === r ? 'text-primary-600' : 'text-slate-500'} />
+                        }
+                      </div>
+                      {r}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary-600 text-white font-semibold text-sm hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors mt-1"
+              disabled={loading}
+            >
+              {loading ? 'Creating account…' : (<>Create account <ArrowRight size={15} /></>)}
+            </button>
+          </form>
+
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-slate-100" />
+            <span className="text-xs text-slate-300 tracking-widest">OR</span>
+            <div className="flex-1 h-px bg-slate-100" />
+          </div>
+
+          <p className="text-center text-sm text-slate-500">
+            Already have an account?{' '}
+            <Link to="/login" className="text-primary-600 font-semibold hover:underline">Sign in</Link>
+          </p>
+
+        </div>
+      </div>
+
+    </div>
   );
 }

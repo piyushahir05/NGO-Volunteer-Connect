@@ -1,23 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Heart, Mail, Lock, ArrowRight } from 'lucide-react';
 
-function useFonts() {
-  useEffect(() => {
-    if (document.getElementById('vm-gf')) return;
-    const l = document.createElement('link');
-    l.id = 'vm-gf';
-    l.rel = 'stylesheet';
-    l.href =
-      'https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap';
-    document.head.appendChild(l);
-  }, []);
-}
-
 export default function Login() {
-  useFonts();
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -40,239 +26,121 @@ export default function Login() {
   };
 
   return (
-    <>
-      <style>{`
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-          background: #fff;
-          font-family: 'Lora', Georgia, serif;
-          -webkit-font-smoothing: antialiased;
-          text-rendering: optimizeLegibility;
-        }
+    <div className="min-h-screen grid md:grid-cols-2">
 
-        .login-page {
-          min-height: 100vh;
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-        }
-        @media (max-width: 720px) {
-          .login-page { grid-template-columns: 1fr; }
-          .login-left  { display: none; }
-        }
-
-        /* ── Left panel ── */
-        .login-left {
-          background: #f0fdf4;
-          border-right: 1px solid #e5e7eb;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          padding: 48px;
-        }
-        .left-logo {
-          display: flex; align-items: center; gap: 10px;
-          text-decoration: none;
-        }
-        .left-logo-icon {
-          width: 34px; height: 34px; border-radius: 8px;
-          background: #16a34a;
-          display: flex; align-items: center; justify-content: center;
-        }
-        .left-logo-text {
-          font-size: 17px; font-weight: 700; color: #111827;
-          letter-spacing: -0.01em;
-        }
-        .left-logo-text span { color: #16a34a; }
-
-        .left-body { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 40px 0; }
-        .left-h {
-          font-size: clamp(1.8rem, 3vw, 2.6rem);
-          color: #111827; line-height: 1.15;
-          letter-spacing: -0.02em; margin-bottom: 18px;
-        }
-        .left-h span { color: #16a34a; }
-        .left-p { font-size: 15.5px; color: #4b5563; line-height: 1.76; max-width: 360px; }
-
-        .left-stats { display: flex; gap: 32px; }
-        .ls-v { font-size: 1.9rem; font-weight: 700; color: #16a34a; display: block; line-height: 1; }
-        .ls-l { font-size: 11px; color: #9ca3af; letter-spacing: 0.07em; text-transform: uppercase; margin-top: 4px; }
-
-        /* ── Right panel ── */
-        .login-right {
-          display: flex; align-items: center; justify-content: center;
-          padding: 48px 40px;
-          background: #fff;
-        }
-        .login-box { width: 100%; max-width: 380px; }
-
-        .login-box-header { margin-bottom: 32px; }
-        .login-box-title {
-          font-size: 1.75rem; color: #111827;
-          letter-spacing: -0.02em; margin-bottom: 6px;
-        }
-        .login-box-sub { font-size: 14.5px; color: #6b7280; line-height: 1.6; }
-
-        /* Form */
-        .form-group { margin-bottom: 18px; }
-        .form-label {
-          display: block; font-size: 13.5px; font-weight: 600;
-          color: #374151; margin-bottom: 7px;
-        }
-        .input-wrap { position: relative; }
-        .input-icon {
-          position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
-          color: #9ca3af; pointer-events: none;
-          display: flex; align-items: center;
-        }
-        .form-input {
-          width: 100%; padding: 11px 14px 11px 38px;
-          border: 1.5px solid #e5e7eb; border-radius: 9px;
-          font-family: 'Lora', Georgia, serif;
-          font-size: 14.5px; color: #111827;
-          background: #fff;
-          transition: border-color 0.18s, box-shadow 0.18s;
-          outline: none;
-        }
-        .form-input::placeholder { color: #c4c4c4; }
-        .form-input:focus {
-          border-color: #16a34a;
-          box-shadow: 0 0 0 3px rgba(22,163,74,0.1);
-        }
-
-        .error-box {
-          padding: 11px 14px; border-radius: 9px;
-          background: #fef2f2; border: 1px solid #fecaca;
-          color: #b91c1c; font-size: 13.5px; margin-bottom: 18px;
-        }
-
-        .btn-submit {
-          width: 100%; padding: 13px;
-          background: #16a34a; color: #fff;
-          font-family: 'Lora', Georgia, serif;
-          font-size: 15px; font-weight: 600;
-          border: none; border-radius: 9px; cursor: pointer;
-          display: flex; align-items: center; justify-content: center; gap: 7px;
-          transition: background 0.18s;
-        }
-        .btn-submit:hover:not(:disabled) { background: #15803d; }
-        .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
-
-        .form-footer {
-          margin-top: 22px; text-align: center;
-          font-size: 14px; color: #6b7280;
-        }
-        .form-footer a {
-          color: #16a34a; font-weight: 600; text-decoration: none;
-        }
-        .form-footer a:hover { text-decoration: underline; }
-
-        .divider-row {
-          display: flex; align-items: center; gap: 12px;
-          margin: 22px 0;
-        }
-        .divider-line { flex: 1; height: 1px; background: #f3f4f6; }
-        .divider-text { font-size: 12px; color: #d1d5db; letter-spacing: 0.05em; }
-      `}</style>
-
-      <div className="login-page">
-
-        {/* ── Left decorative panel ── */}
-        <div className="login-left">
-          <Link to="/" className="left-logo">
-            <div className="left-logo-icon">
-              <Heart size={16} color="#fff" fill="#fff" />
-            </div>
-            <span className="left-logo-text">VolunteerMatch <span>AI</span></span>
-          </Link>
-
-          <div className="left-body">
-            <h2 className="left-h">
-              Good to have <br />you <span>back.</span>
-            </h2>
-            <p className="left-p">
-              Thousands of volunteers and NGOs are already creating change.
-              Sign in to continue your journey.
-            </p>
+      {/* Left decorative panel */}
+      <div className="hidden md:flex flex-col justify-between bg-primary-50 border-r border-slate-200 p-12">
+        <Link to="/" className="flex items-center gap-2.5 no-underline">
+          <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center flex-shrink-0">
+            <Heart size={16} className="text-white fill-white" />
           </div>
+          <span className="text-lg font-bold text-slate-800">
+            VolunteerMatch <span className="text-primary-600">AI</span>
+          </span>
+        </Link>
 
-          <div className="left-stats">
-            {[
-              { v: '10,000+', l: 'Volunteers' },
-              { v: '500+',    l: 'Partner NGOs' },
-              { v: '85%',     l: 'Match Rate' },
-            ].map((s) => (
-              <div key={s.l}>
-                <span className="ls-v">{s.v}</span>
-                <span className="ls-l">{s.l}</span>
-              </div>
-            ))}
-          </div>
+        <div className="py-10">
+          <h2 className="text-4xl font-display font-bold text-slate-800 leading-tight tracking-tight mb-4">
+            Good to have <br />you <span className="text-primary-600">back.</span>
+          </h2>
+          <p className="text-base text-slate-600 leading-relaxed max-w-xs">
+            Thousands of volunteers and NGOs are already creating change. Sign in to continue your journey.
+          </p>
         </div>
 
-        {/* ── Right form panel ── */}
-        <div className="login-right">
-          <div className="login-box">
-
-            <div className="login-box-header">
-              <h1 className="login-box-title">Sign in</h1>
-              <p className="login-box-sub">Welcome back — enter your details below.</p>
+        <div className="flex gap-8">
+          {[
+            { v: '10,000+', l: 'Volunteers' },
+            { v: '500+',    l: 'Partner NGOs' },
+            { v: '85%',     l: 'Match Rate' },
+          ].map((s) => (
+            <div key={s.l}>
+              <span className="block text-3xl font-bold text-primary-600 leading-none">{s.v}</span>
+              <span className="block text-xs text-slate-400 tracking-widest uppercase mt-1">{s.l}</span>
             </div>
-
-            <form onSubmit={handleSubmit}>
-              {error && <div className="error-box">{error}</div>}
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="email">Email address</label>
-                <div className="input-wrap">
-                  <span className="input-icon"><Mail size={15} /></span>
-                  <input
-                    id="email"
-                    type="email"
-                    className="form-input"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="password">Password</label>
-                <div className="input-wrap">
-                  <span className="input-icon"><Lock size={15} /></span>
-                  <input
-                    id="password"
-                    type="password"
-                    className="form-input"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <button type="submit" className="btn-submit" disabled={loading}>
-                {loading ? 'Signing in…' : (<>Sign in <ArrowRight size={15} /></>)}
-              </button>
-            </form>
-
-            <div className="divider-row">
-              <div className="divider-line" />
-              <span className="divider-text">OR</span>
-              <div className="divider-line" />
-            </div>
-
-            <p className="form-footer">
-              Don't have an account?{' '}
-              <Link to="/register">Create one</Link>
-            </p>
-
-          </div>
+          ))}
         </div>
-
       </div>
-    </>
+
+      {/* Right form panel */}
+      <div className="flex items-center justify-center p-8 md:p-12 bg-white">
+        <div className="w-full max-w-sm">
+
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-slate-800 tracking-tight mb-1.5">Sign in</h1>
+            <p className="text-sm text-slate-500">Welcome back — enter your details below.</p>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            {error && (
+              <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm mb-5">
+                {error}
+              </div>
+            )}
+
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="email">
+                Email address
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 flex items-center pointer-events-none">
+                  <Mail size={15} />
+                </span>
+                <input
+                  id="email"
+                  type="email"
+                  className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 bg-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="password">
+                Password
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 flex items-center pointer-events-none">
+                  <Lock size={15} />
+                </span>
+                <input
+                  id="password"
+                  type="password"
+                  className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 bg-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary-600 text-white font-semibold text-sm hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              disabled={loading}
+            >
+              {loading ? 'Signing in…' : (<>Sign in <ArrowRight size={15} /></>)}
+            </button>
+          </form>
+
+          <div className="flex items-center gap-3 my-6">
+            <div className="flex-1 h-px bg-slate-100" />
+            <span className="text-xs text-slate-300 tracking-widest">OR</span>
+            <div className="flex-1 h-px bg-slate-100" />
+          </div>
+
+          <p className="text-center text-sm text-slate-500">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-primary-600 font-semibold hover:underline">Create one</Link>
+          </p>
+
+        </div>
+      </div>
+
+    </div>
   );
 }
