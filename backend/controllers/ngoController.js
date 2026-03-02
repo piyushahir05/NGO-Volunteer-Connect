@@ -48,3 +48,49 @@ exports.getMyOpportunities = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getDashboardStats = async (req, res, next) => {
+  try {
+    const opportunities = await Opportunity.find({ ngoId: req.user._id })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const activeEvents = opportunities.length;
+
+    const volunteerIds = new Set();
+    let pendingApplications = 0;
+
+    for (const opp of opportunities) {
+      for (const a of opp.applicants || []) {
+        if (a.volunteerId) volunteerIds.add(a.volunteerId.toString());
+        if (a.status === 'Pending') pendingApplications++;
+      }
+    }
+
+    const totalVolunteers = volunteerIds.size;
+
+    const events = opportunities.map((opp) => {
+      const applicants = opp.applicants || [];
+      const accepted = applicants.filter((a) => a.status === 'Accepted').length;
+      const total = applicants.length;
+      return {
+        _id: opp._id,
+        title: opp.title,
+        totalApplicants: total,
+        accepted,
+        pending: applicants.filter((a) => a.status === 'Pending').length,
+        rejected: applicants.filter((a) => a.status === 'Rejected').length,
+        fillRate: total > 0 ? Math.round((accepted / total) * 100) : 0,
+      };
+    });
+
+    res.json({
+      activeEvents,
+      totalVolunteers,
+      pendingApplications,
+      events,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
