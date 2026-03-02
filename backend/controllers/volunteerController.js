@@ -65,3 +65,50 @@ exports.getMyApplications = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getDashboardStats = async (req, res, next) => {
+  try {
+    const opportunities = await Opportunity.find({
+      'applicants.volunteerId': req.user._id,
+    })
+      .populate('ngoId', 'name')
+      .lean();
+
+    let totalApplications = 0;
+    let accepted = 0;
+    let pending = 0;
+    let rejected = 0;
+    const ngoSet = new Set();
+
+    const applications = opportunities.map((opp) => {
+      const app = opp.applicants.find(
+        (a) => a.volunteerId && a.volunteerId.toString() === req.user._id.toString()
+      );
+      const status = app?.status || 'Pending';
+      totalApplications++;
+      if (status === 'Accepted') accepted++;
+      else if (status === 'Pending') pending++;
+      else if (status === 'Rejected') rejected++;
+      if (opp.ngoId?._id) ngoSet.add(opp.ngoId._id.toString());
+      return {
+        _id: opp._id,
+        title: opp.title,
+        ngoName: opp.ngoId?.name,
+        status,
+        appliedAt: app?.createdAt,
+      };
+    });
+
+    res.json({
+      userName: req.user.name,
+      totalApplications,
+      accepted,
+      pending,
+      rejected,
+      causesSupported: ngoSet.size,
+      applications,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
