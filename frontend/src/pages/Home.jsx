@@ -96,7 +96,7 @@ export default function Home() {
         <div>
           <div className="mb-4">
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold">
-              <Sparkles size={11} /> Powered Social Impact
+              <Sparkles size={11} /> Smart Social Impact
             </span>
           </div>
           <h1 className="font-display text-4xl md:text-5xl lg:text-6xl leading-tight tracking-tight text-slate-900 mb-5">
