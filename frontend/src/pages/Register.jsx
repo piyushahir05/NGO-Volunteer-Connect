@@ -41,7 +41,7 @@ export default function Register() {
             <Heart size={16} className="text-white fill-white" />
           </div>
           <span className="text-lg font-bold text-slate-800">
-            VolunteerMatch <span className="text-primary-600">AI</span>
+            VolunteerMatch
           </span>
         </Link>
 
@@ -50,7 +50,7 @@ export default function Register() {
             Start making <br />an <span className="text-primary-600">impact today.</span>
           </h2>
           <p className="text-base text-slate-600 leading-relaxed max-w-xs mb-8">
-            Join a growing community of volunteers and NGOs using AI to connect the right people with the right causes.
+            Join a growing community of volunteers and NGOs connecting the right people with the right causes.
           </p>
 
           <div className="flex flex-col gap-3">

@@ -35,7 +35,7 @@ export default function Login() {
             <Heart size={16} className="text-white fill-white" />
           </div>
           <span className="text-lg font-bold text-slate-800">
-            VolunteerMatch <span className="text-primary-600">AI</span>
+            VolunteerMatch
           </span>
         </Link>
 
