@@ -109,7 +109,7 @@ export default function VolunteerDashboard() {
               Welcome back, <span className="text-emerald-600">Alex</span> 👋
             </h1>
             <p className="text-slate-500 mt-1 max-w-lg">
-              You've impacted <span className="font-semibold text-emerald-600">124 lives</span> so far 💚 &mdash; keep the momentum going!
+              You've impacted <span className="font-semibold text-emerald-600">124 lives</span> so far 💚 — keep the momentum going!
             </p>
 
             {/* Streak badge */}
