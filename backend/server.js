@@ -25,7 +25,7 @@ app.use('/api/volunteer', volunteerRoutes);
 app.use('/api/ngo', ngoRoutes);
 app.use('/api/opportunities', opportunityRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/recommend', recommendationRoutes);
+
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
