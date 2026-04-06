@@ -130,7 +130,11 @@ NGO-Volunteer-Connect/
 ├── README.md
 └── LICENSE
 ```
-
+<!-- ML services -->
+cd ml-service
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+# Interactive docs → http://localhost:8000/docs
 ---
 
 ## 🚀 Getting Started

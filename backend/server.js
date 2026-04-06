@@ -12,6 +12,7 @@ const ngoRoutes = require('./routes/ngoRoutes');
 const opportunityRoutes = require('./routes/opportunityRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 
+
 const app = express();
 const server = http.createServer(app);
 
@@ -24,6 +25,7 @@ app.use('/api/volunteer', volunteerRoutes);
 app.use('/api/ngo', ngoRoutes);
 app.use('/api/opportunities', opportunityRoutes);
 app.use('/api/notifications', notificationRoutes);
+
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
