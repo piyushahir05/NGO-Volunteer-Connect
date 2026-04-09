@@ -1,19 +1,18 @@
-import { useEffect, useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import {
-  Heart, Clock, Calendar, Award, CheckCircle,
-  ArrowRight, Users, Target, Trophy,
-  Zap, BookOpen, User, Search, FileText, Briefcase,
-  Loader2, Activity, LayoutDashboard, ShieldCheck, Sparkles
+import { 
+  Sparkles, BrainCircuit, CheckCircle, Clock, 
+  FileText, Briefcase, Activity, BookHeart, 
+  Star, Plus, X, Award
 } from 'lucide-react';
 
 /* ───── Animation Variants ───── */
 const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } }
+  hidden: { opacity: 0, y: 15 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } }
 };
 
 const staggerContainer = {
@@ -21,289 +20,445 @@ const staggerContainer = {
   visible: { opacity: 1, transition: { staggerChildren: 0.08 } }
 };
 
-/* ───── Dynamic Badge Generator ───── */
-const generateBadges = (stats) => [
-  { name: 'First Step', icon: Zap, desc: 'Submitted first app', earned: stats?.totalApplications > 0 },
-  { name: 'Active Supporter', icon: Heart, desc: 'Supported 2+ causes', earned: stats?.causesSupported >= 2 },
-  { name: 'Trusted Partner', icon: ShieldCheck, desc: 'Accepted to an event', earned: stats?.accepted >= 1 },
-  { name: 'Team Player', icon: Users, desc: 'Accepted to 3+ events', earned: stats?.accepted >= 3 },
-  { name: 'Impact Maker', icon: Target, desc: 'Applied to 10+ ops', earned: stats?.totalApplications >= 10 },
-  { name: 'Century Club', icon: Trophy, desc: 'Outstanding dedication', earned: stats?.accepted >= 20 },
-];
-
-const QUICK_ACTIONS = [
-  { to: '/volunteer/profile', icon: User, title: 'My Profile', desc: 'Keep your skills up to date.', cta: 'Edit profile' },
-  { to: '/volunteer/opportunities', icon: Search, title: 'Discover', desc: 'Find matching causes.', cta: 'Browse now' },
-  { to: '/volunteer/applications', icon: FileText, title: 'Applications', desc: 'Track your pipeline.', cta: 'View all' },
-];
-
-/* ───── Reusable Premium Glass Components ───── */
+/* ───── Premium Glass Classes ───── */
 const glassCardClass = "bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[0_4px_24px_rgba(5,150,105,0.04)] rounded-[1.5rem] overflow-hidden";
+const glassHoverClass = "hover:bg-white/60 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(5,150,105,0.08)] hover:-translate-y-0.5";
+const inputClass = "w-full bg-white/50 border border-white/80 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-colors";
 
-function ProgressBar({ percent, color = 'bg-emerald-500' }) {
-  return (
-    <div className="h-2 w-full rounded-full bg-white/50 border border-white/30 overflow-hidden shadow-inner">
-      <motion.div 
-        initial={{ width: 0 }}
-        animate={{ width: `${percent}%` }}
-        transition={{ duration: 1.2, ease: "easeOut", delay: 0.2 }}
-        className={`h-full rounded-full ${color} shadow-[0_0_8px_rgba(16,185,129,0.3)] relative overflow-hidden`} 
-      >
-        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
-      </motion.div>
-    </div>
-  );
-}
-
-function SectionLabel({ icon: Icon, children }) {
-  return (
-    <div className="flex items-center gap-2 mb-4 ml-1">
-      <div className="p-1 rounded-md bg-emerald-100/50 text-emerald-700 backdrop-blur-sm border border-emerald-200/50">
-        {Icon && <Icon size={14} strokeWidth={2.5} />}
-      </div>
-      <h3 className="font-display text-base font-bold text-slate-800 tracking-tight">{children}</h3>
-    </div>
-  );
-}
-
-/* ───────────────── Main Component ───────────────── */
 export default function VolunteerDashboard() {
   const { user } = useAuth();
-  const [stats, setStats] = useState(null);
+  
+  // Data States
+  const [profile, setProfile] = useState(null);
+  const [stats, setStats] = useState({ total: 0, accepted: 0, pending: 0 });
+  const [applications, setApplications] = useState([]);
+  const [smartMatches, setSmartMatches] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+
+  // Memories & Feedback Feature States
+  const [memories, setMemories] = useState([]);
+  const [isMemoryModalOpen, setIsMemoryModalOpen] = useState(false);
+  const [newMemory, setNewMemory] = useState({ opportunityId: '', opportunityTitle: '', rating: 5, text: '' });
 
   useEffect(() => {
     let cancelled = false;
-    async function fetchStats() {
+    
+    async function fetchDashboardData() {
       try {
-        const { data } = await api.get('/volunteer/dashboard-stats');
-        if (!cancelled) setStats(data);
+        // 1. Fetch Standard Backend Data (Node.js)
+        const [profileRes, appsRes, oppsRes, memoriesRes] = await Promise.all([
+          api.get('/volunteer/profile').catch(() => ({ data: {} })),
+          api.get('/volunteer/applications').catch(() => ({ data: [] })),
+          api.get('/opportunities').catch(() => ({ data: [] })),
+          api.get('/volunteer/memories').catch(() => ({ data: [] }))
+        ]);
+
+        if (cancelled) return;
+
+        const profileData = profileRes.data;
+        const apps = appsRes.data || [];
+        const opps = oppsRes.data || [];
+        const dbMemories = memoriesRes.data || [];
+
+        setProfile(profileData);
+        setApplications(apps);
+        setMemories(dbMemories);
+        
+        setStats({
+          total: apps.length,
+          accepted: apps.filter(a => a.status?.toLowerCase() === 'accepted').length,
+          pending: apps.filter(a => a.status?.toLowerCase() === 'pending').length,
+        });
+
+        // 2. 🚀 Python FastAPI ML Recommendation Call (Port 8000) 🚀
+        try {
+          const userSkills = profileData.skills ? 
+            (Array.isArray(profileData.skills) ? profileData.skills : profileData.skills.split(','))
+            .map(s => s.trim().toLowerCase()).filter(Boolean) : [];
+
+          // Format payload strictly to match Python's RecommendOpportunitiesRequest
+          const mlPayload = {
+            skills: userSkills,
+            opportunities: opps.map(opp => ({
+              id: opp._id.toString(),
+              requiredSkills: opp.requiredSkills || []
+            }))
+          };
+
+          const mlRes = await fetch('http://localhost:8000/recommend/opportunities', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(mlPayload)
+          });
+
+          if (!mlRes.ok) throw new Error(`ML Server returned ${mlRes.status}`);
+
+          const recommendations = await mlRes.json(); // Array of { id, matchScore }
+
+          // Filter out applied opportunities and map full details back
+          const appliedOppIds = new Set(apps.map(app => app.opportunityId?._id || app.opportunityId));
+          const rankedOpps = recommendations
+            .filter(rec => !appliedOppIds.has(rec.id) && rec.matchScore > 0.1) // Minimum threshold
+            .map(rec => {
+              const fullOpp = opps.find(o => o._id === rec.id);
+              // Convert decimal score to percentage if needed
+              const displayScore = rec.matchScore <= 1 ? Math.round(rec.matchScore * 100) : Math.round(rec.matchScore);
+              return fullOpp ? { ...fullOpp, matchScore: displayScore } : null;
+            })
+            .filter(Boolean)
+            .sort((a, b) => b.matchScore - a.matchScore);
+
+          setSmartMatches(rankedOpps.slice(0, 3));
+        } catch (mlErr) {
+          console.error("ML Service Error: Make sure uvicorn is running on port 8000. ", mlErr);
+          setSmartMatches([]); // Fail gracefully
+        }
+
       } catch (err) {
-        if (!cancelled) setError(err.message || 'Failed to load dashboard stats');
+        console.error("Dashboard fetch error:", err);
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
-    fetchStats();
+
+    fetchDashboardData();
     return () => { cancelled = true; };
-  }, []);
+  }, [user._id]);
 
-  const userName = stats?.userName || user?.name || 'Volunteer';
+  // Save Memory to MongoDB via Node.js
+  const handleSaveMemory = async (e) => {
+    e.preventDefault();
+    if (!newMemory.text.trim() || !newMemory.opportunityId) return;
+    
+    try {
+      const memoryPayload = {
+        opportunityId: newMemory.opportunityId,
+        opportunityTitle: newMemory.opportunityTitle,
+        rating: newMemory.rating,
+        text: newMemory.text,
+        date: new Date().toISOString()
+      };
 
-  const impactStats = useMemo(() => stats ? [
-    { label: 'Applications',       value: stats.totalApplications || 0, icon: FileText, color: 'text-blue-600',  bg: 'bg-blue-100/50',  border: 'border-blue-200/50' },
-    { label: 'Accepted',           value: stats.accepted || 0,          icon: Calendar, color: 'text-emerald-600',bg: 'bg-emerald-100/50',border: 'border-emerald-200/50' },
-    { label: 'Causes Supported',   value: stats.causesSupported || 0,   icon: Heart,    color: 'text-rose-600',   bg: 'bg-rose-100/50',  border: 'border-rose-200/50' },
-    { label: 'Pending Reviews',    value: stats.pending || 0,           icon: Clock,    color: 'text-amber-600',  bg: 'bg-amber-100/50', border: 'border-amber-200/50' },
-  ] : [], [stats]);
+      const res = await api.post('/volunteer/memories', memoryPayload);
+      setMemories([res.data || memoryPayload, ...memories]);
+      setNewMemory({ opportunityId: '', opportunityTitle: '', rating: 5, text: '' });
+      setIsMemoryModalOpen(false);
+    } catch (err) {
+      console.error("Failed to save memory", err);
+      alert("Failed to save memory. Please check your backend.");
+    }
+  };
 
-  const applicationStats = useMemo(() => stats ? [
-    { label: 'Sent',     value: stats.totalApplications || 0, color: 'bg-slate-400' },
-    { label: 'Accepted', value: stats.accepted || 0,          color: 'bg-emerald-500' },
-    { label: 'Pending',  value: stats.pending || 0,           color: 'bg-amber-400' },
-    { label: 'Declined', value: stats.rejected || 0,          color: 'bg-slate-300' },
-  ] : [], [stats]);
+  const greeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 18) return 'Good Afternoon';
+    return 'Good Evening';
+  };
 
-  const totalApps = stats?.totalApplications || 0;
-  const userBadges = useMemo(() => generateBadges(stats), [stats]);
-  const earnedBadgesCount = userBadges.filter(b => b.earned).length;
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'accepted': return 'text-emerald-600 bg-emerald-100 border-emerald-200';
+      case 'rejected': return 'text-red-600 bg-red-100 border-red-200';
+      default: return 'text-amber-600 bg-amber-100 border-amber-200';
+    }
+  };
 
   return (
     <div className="relative min-h-screen bg-[#F9F6F0] overflow-hidden py-6 px-4 sm:px-6 lg:px-8 font-sans selection:bg-emerald-200 selection:text-emerald-900">
       
-      {/* ── Ambient Background Orbs (Scaled Down) ── */}
-      <div className="fixed top-[-5%] left-[-5%] w-[30vw] h-[30vw] rounded-full bg-emerald-300/20 blur-[100px] pointer-events-none mix-blend-multiply animate-[pulse_8s_ease-in-out_infinite]" />
-      <div className="fixed bottom-[-5%] right-[-5%] w-[40vw] h-[40vw] rounded-full bg-teal-200/25 blur-[120px] pointer-events-none mix-blend-multiply animate-[pulse_10s_ease-in-out_infinite_reverse]" />
-      <div className="fixed top-[15%] right-[10%] w-[20vw] h-[20vw] rounded-full bg-amber-100/30 blur-[80px] pointer-events-none mix-blend-multiply" />
-
+      {/* Background Ambience */}
+      <div className="fixed top-[0%] left-[-10%] w-[35vw] h-[35vw] rounded-full bg-emerald-300/20 blur-[100px] pointer-events-none mix-blend-multiply animate-[pulse_8s_ease-in-out_infinite]" />
+      <div className="fixed bottom-[-10%] right-[-5%] w-[45vw] h-[45vw] rounded-full bg-teal-200/25 blur-[120px] pointer-events-none mix-blend-multiply animate-[pulse_10s_ease-in-out_infinite_reverse]" />
+      
       <div className="relative z-10 max-w-6xl mx-auto space-y-8">
         
-        {/* ── Loading / Error States ── */}
-        {loading && (
-          <div className="flex flex-col items-center justify-center py-24 h-[50vh]">
-            <div className="relative w-12 h-12 flex items-center justify-center">
-               <div className="absolute inset-0 rounded-full border-4 border-emerald-100"></div>
-               <div className="absolute inset-0 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin"></div>
-            </div>
-            <span className="mt-4 text-xs font-bold tracking-widest text-emerald-600 uppercase">Synchronizing...</span>
+        {/* Header */}
+        <motion.div initial="hidden" animate="visible" variants={fadeUp} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-slate-800 tracking-tight flex items-center gap-3">
+              {greeting()}, {user?.name?.split(' ')[0]}! <Sparkles className="text-emerald-500 animate-pulse" size={28} />
+            </h1>
+            <p className="text-sm sm:text-base font-bold text-slate-500 mt-1.5">
+              Welcome back to your dashboard. Here's your impact overview.
+            </p>
           </div>
-        )}
+          
+          <Link to="/volunteer/opportunities" className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md shadow-emerald-500/20 transition-all hover:-translate-y-0.5">
+            <Briefcase size={18} /> Find Opportunities
+          </Link>
+        </motion.div>
 
-        {error && (
-          <div className="bg-red-50/80 backdrop-blur-md border border-red-200 rounded-xl p-4 text-sm text-red-700 flex items-center gap-3 shadow-sm">
-            <Activity size={18} className="text-red-500" />
-            <span className="font-medium">{error}</span>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
           </div>
-        )}
-
-        {stats && (
-          <motion.div 
-            initial="hidden" 
-            animate="visible" 
-            variants={staggerContainer} 
-            className="space-y-8"
-          >
-            {/* ── Hero Glass Panel ── */}
-            <motion.div variants={fadeUp} className={`${glassCardClass} p-6 md:p-8 relative group`}>
-              <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:opacity-40 transition-opacity duration-700 pointer-events-none">
-                <Sparkles size={80} className="text-emerald-600" />
-              </div>
-              <div className="relative z-10 max-w-2xl">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/50 border border-white/60 shadow-sm text-emerald-700 text-[10px] font-bold tracking-widest uppercase mb-4 backdrop-blur-md">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Volunteer Portal
-                </div>
-                <h1 className="font-display text-3xl md:text-4xl font-extrabold text-slate-800 tracking-tight leading-[1.15] mb-2">
-                  Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500">{userName}.</span>
-                </h1>
-                <p className="text-slate-600 text-sm md:text-base font-medium leading-relaxed">
-                  You have <strong className="text-slate-800">{stats.accepted} accepted application{stats.accepted !== 1 ? 's' : ''}</strong>. Your energy is shaping a better tomorrow.
-                </p>
-              </div>
-            </motion.div>
-
-            {/* ── Impact Stats Grid ── */}
-            <motion.section variants={fadeUp}>
-              <SectionLabel icon={Activity}>Impact Overview</SectionLabel>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {impactStats.map((s) => (
-                  <div key={s.label} className={`${glassCardClass} p-5 flex flex-col items-start gap-3 hover:-translate-y-0.5 transition-transform duration-300 group cursor-default`}>
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center border backdrop-blur-md transition-colors duration-300 ${s.bg} ${s.border} group-hover:bg-white`}>
-                      <s.icon size={18} className={s.color} />
-                    </div>
-                    <div>
-                      <div className="text-2xl md:text-3xl font-display font-extrabold text-slate-800 leading-none mb-1.5 tracking-tight">{s.value}</div>
-                      <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{s.label}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.section>
-
-            {/* ── Pipeline & Badges (Two Column Layout) ── */}
-            <motion.div variants={staggerContainer} className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-              
-              {/* Pipeline Widget */}
-              <motion.section variants={fadeUp} className={`lg:col-span-5 ${glassCardClass} p-6 flex flex-col`}>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-display font-bold text-slate-800 flex items-center gap-2">
-                    <Briefcase size={18} className="text-emerald-600" /> Pipeline
-                  </h2>
-                </div>
-                
-                <div className="space-y-4 flex-1">
-                  {applicationStats.map((a) => (
-                    <div key={a.label} className="flex items-center gap-3 group">
-                      <span className="w-16 text-xs font-bold text-slate-500 group-hover:text-slate-800 transition-colors">{a.label}</span>
-                      <div className="flex-1">
-                        <ProgressBar percent={totalApps ? (a.value / totalApps) * 100 : 0} color={a.color} />
-                      </div>
-                      <span className="text-sm font-display font-bold text-slate-800 w-6 text-right">{a.value}</span>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="mt-6 pt-4 border-t border-slate-200/50 flex items-start gap-2.5 text-xs text-slate-600 font-medium bg-white/30 p-3 rounded-xl border border-white/50">
-                  <CheckCircle size={16} className="text-emerald-600 shrink-0 mt-0.5" />
-                  <p className="leading-relaxed">
-                    <strong className="text-slate-800 text-sm">{stats.accepted}</strong> of {stats.totalApplications} accepted. Keep applying!
-                  </p>
-                </div>
-              </motion.section>
-
-              {/* Achievements Widget */}
-              <motion.section variants={fadeUp} className={`lg:col-span-7 ${glassCardClass} p-6 flex flex-col`}>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-display font-bold text-slate-800 flex items-center gap-2">
-                    <Award size={18} className="text-amber-500" /> Milestones
-                  </h2>
-                  <div className="px-3 py-1 rounded-full bg-white/60 border border-white/80 shadow-sm backdrop-blur-md">
-                    <span className="text-[10px] font-extrabold text-slate-700 tracking-widest uppercase">
-                      <span className="text-emerald-600">{earnedBadgesCount}</span> / {userBadges.length} Unlocked
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 flex-1">
-                  {userBadges.map((b) => (
-                    <div
-                      key={b.name}
-                      className={`relative flex flex-col items-center text-center p-4 rounded-xl border backdrop-blur-md transition-all duration-500 ${
-                        b.earned
-                          ? 'bg-white/60 border-white/80 shadow-sm shadow-emerald-900/5 hover:-translate-y-0.5'
-                          : 'bg-white/20 border-white/30 opacity-60 grayscale hover:grayscale-0 hover:opacity-100'
-                      }`}
-                    >
-                      {b.earned && (
-                        <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center shadow-md border-2 border-white z-10">
-                          <CheckCircle size={10} className="text-white" strokeWidth={3} />
-                        </span>
-                      )}
-                      <div className={`p-2.5 rounded-xl mb-2.5 ${b.earned ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
-                        <b.icon size={20} strokeWidth={2} />
-                      </div>
-                      <span className="text-xs font-extrabold text-slate-800 leading-tight mb-1">{b.name}</span>
-                      <span className="text-[10px] text-slate-500 font-medium leading-tight px-1">{b.desc}</span>
-                    </div>
-                  ))}
-                </div>
-              </motion.section>
-            </motion.div>
-
-            {/* ── Platform Navigation ── */}
-            <motion.section variants={fadeUp}>
-              <SectionLabel icon={LayoutDashboard}>Navigation</SectionLabel>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {QUICK_ACTIONS.map((c) => (
-                  <Link
-                    key={c.to}
-                    to={c.to}
-                    className={`${glassCardClass} p-5 flex flex-col gap-3 group hover:bg-white/60 hover:border-emerald-200/60 hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5`}
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-white/50 border border-white/60 shadow-sm flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-colors duration-500 text-emerald-700">
-                      <c.icon size={20} strokeWidth={2} />
-                    </div>
-                    <div>
-                      <div className="text-base font-display font-bold text-slate-800 mb-1">{c.title}</div>
-                      <p className="text-xs text-slate-500 font-medium leading-relaxed">{c.desc}</p>
-                    </div>
-                    <div className="mt-auto pt-3 border-t border-slate-200/40 flex items-center justify-between text-xs font-bold text-emerald-600">
-                      <span>{c.cta}</span>
-                      <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform duration-300" />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </motion.section>
-
-            {/* ── Footer Call to Action ── */}
-            <motion.div variants={fadeUp} className={`${glassCardClass} p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 bg-gradient-to-br from-white/40 to-emerald-50/40`}>
-              <div className="flex items-center gap-5">
-                <div className="hidden sm:flex w-12 h-12 rounded-full bg-emerald-100/80 border border-emerald-200/80 items-center justify-center shrink-0 shadow-inner">
-                  <BookOpen size={24} className="text-emerald-600" />
+        ) : (
+          <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="space-y-8">
+            
+            {/* Stats Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              <motion.div variants={fadeUp} className={`${glassCardClass} p-6 flex items-center gap-4`}>
+                <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                  <FileText size={24} />
                 </div>
                 <div>
-                  <h3 className="font-display text-lg font-bold text-slate-800 mb-1">Ready to make a bigger impact?</h3>
-                  <p className="text-xs text-slate-600 font-medium">Explore new causes and connect with organizations.</p>
+                  <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-0.5">Total Applied</p>
+                  <p className="text-2xl font-black text-slate-800">{stats.total}</p>
+                </div>
+              </motion.div>
+
+              <motion.div variants={fadeUp} className={`${glassCardClass} p-6 flex items-center gap-4`}>
+                <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                  <CheckCircle size={24} />
+                </div>
+                <div>
+                  <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-0.5">Accepted Roles</p>
+                  <p className="text-2xl font-black text-slate-800">{stats.accepted}</p>
+                </div>
+              </motion.div>
+
+              <motion.div variants={fadeUp} className={`${glassCardClass} p-6 flex items-center gap-4`}>
+                <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                  <Clock size={24} />
+                </div>
+                <div>
+                  <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-0.5">Pending</p>
+                  <p className="text-2xl font-black text-slate-800">{stats.pending}</p>
+                </div>
+              </motion.div>
+
+              <motion.div variants={fadeUp} className={`${glassCardClass} p-6 flex items-center gap-4 border-teal-200/50 bg-gradient-to-br from-teal-50 to-emerald-50`}>
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-400 to-emerald-500 flex items-center justify-center text-white shrink-0 shadow-inner">
+                  <Award size={24} />
+                </div>
+                <div>
+                  <p className="text-[11px] font-extrabold text-teal-700 uppercase tracking-widest mb-0.5">Impact Memories</p>
+                  <p className="text-2xl font-black text-slate-800 flex items-baseline gap-1">
+                    {memories.length} <span className="text-xs font-bold text-teal-600 ml-1">Logs</span>
+                  </p>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Smart Matches (ML Output) */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-display font-extrabold text-slate-800 flex items-center gap-2">
+                  <BrainCircuit className="text-emerald-500" size={22} /> Smart Matches
+                </h2>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Powered by ML TF-IDF</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {smartMatches.length > 0 ? smartMatches.map(opp => (
+                  <motion.div key={opp._id} variants={fadeUp} className={`${glassCardClass} ${glassHoverClass} p-5 flex flex-col relative`}>
+                    <div className="absolute top-4 right-4 flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-md text-[10px] font-bold border border-emerald-200 shadow-sm">
+                      <Sparkles size={12} /> {opp.matchScore}% Match
+                    </div>
+                    
+                    <h3 className="font-bold text-slate-800 text-lg leading-tight mb-2 pr-20 line-clamp-2">{opp.title}</h3>
+                    <p className="text-sm font-medium text-slate-500 line-clamp-2 mb-4 flex-1">
+                      {opp.description || "Highly recommended based on your skills."}
+                    </p>
+                    
+                    <div className="flex flex-wrap gap-1.5 mb-5">
+                      {opp.requiredSkills?.slice(0, 3).map((skill, idx) => (
+                        <span key={idx} className="px-2 py-0.5 bg-white/60 border border-white/80 text-slate-600 rounded text-[9px] font-bold uppercase tracking-wider">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                    
+                    <Link to="/volunteer/opportunities" className="w-full py-2.5 bg-white/60 border border-white/80 hover:border-emerald-500 hover:text-emerald-700 text-slate-700 text-sm font-bold rounded-xl text-center transition-all shadow-sm">
+                      Review Opportunity
+                    </Link>
+                  </motion.div>
+                )) : (
+                  <div className={`${glassCardClass} col-span-3 p-8 text-center`}>
+                    <BrainCircuit className="mx-auto text-slate-300 mb-3" size={32} />
+                    <p className="text-slate-600 font-bold">Waiting for ML recommendations...</p>
+                    <p className="text-sm text-slate-500 mt-1">Make sure you have skills added to your profile to get matches!</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Impact Journal & Activity Feed */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              
+              {/* Journal */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-display font-extrabold text-slate-800 flex items-center gap-2">
+                    <BookHeart className="text-rose-500" size={20} /> Impact Journal
+                  </h2>
+                  <button 
+                    onClick={() => setIsMemoryModalOpen(true)}
+                    className="text-xs font-bold bg-white/60 border border-white/80 text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors shadow-sm"
+                  >
+                    <Plus size={14} /> Log Memory
+                  </button>
+                </div>
+
+                <div className={`${glassCardClass} p-4 min-h-[300px]`}>
+                  {memories.length > 0 ? (
+                    <div className="space-y-3">
+                      {memories.slice(0, 3).map((mem, idx) => (
+                        <motion.div key={mem._id || idx} variants={fadeUp} className="bg-white/50 border border-white/80 p-4 rounded-xl shadow-sm backdrop-blur-sm">
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-bold text-slate-800 text-sm">{mem.opportunityTitle || 'Activity'}</h4>
+                            <div className="flex text-amber-400">
+                              {[...Array(mem.rating || 5)].map((_, i) => <Star key={i} size={12} fill="currentColor" />)}
+                            </div>
+                          </div>
+                          <p className="text-sm text-slate-600 italic">"{mem.text}"</p>
+                          <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-wider">
+                            {new Date(mem.date || mem.createdAt).toLocaleDateString()}
+                          </p>
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-6 opacity-60">
+                      <BookHeart size={40} className="text-rose-300 mb-3" />
+                      <p className="text-sm font-bold text-slate-600 mb-1">Your journal is empty.</p>
+                      <p className="text-xs text-slate-500">Log memories for activities you've participated in.</p>
+                    </div>
+                  )}
                 </div>
               </div>
-              <Link 
-                to="/volunteer/opportunities" 
-                className="w-full md:w-auto px-6 py-3 bg-emerald-600 text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:bg-emerald-700 hover:shadow-md hover:shadow-emerald-600/20 transition-all duration-300 text-center whitespace-nowrap"
-              >
-                Find Opportunities
-              </Link>
-            </motion.div>
 
+              {/* Activity Feed */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-display font-extrabold text-slate-800 flex items-center gap-2">
+                    <Activity className="text-blue-500" size={20} /> Application History
+                  </h2>
+                  <Link to="/volunteer/applications" className="text-xs font-bold text-slate-500 hover:text-emerald-600 uppercase tracking-widest transition-colors">
+                    View All
+                  </Link>
+                </div>
+
+                <div className={`${glassCardClass} p-1 h-[300px] overflow-y-auto custom-scrollbar`}>
+                  {applications.length > 0 ? (
+                    <div className="divide-y divide-slate-200/50">
+                      {applications.slice(0, 5).map((app) => (
+                        <motion.div key={app._id} variants={fadeUp} className="p-5 hover:bg-white/50 transition-colors flex flex-col gap-2">
+                          <h4 className="font-bold text-slate-800 text-sm line-clamp-1">
+                            {app.opportunityId?.title || app.title || "Opportunity Application"}
+                          </h4>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${getStatusColor(app.status)}`}>
+                              {app.status || 'Pending'}
+                            </span>
+                            <span className="text-xs font-bold text-slate-400">
+                              {new Date(app.createdAt || Date.now()).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center p-8 text-center opacity-60">
+                      <FileText className="text-slate-300 mb-3" size={40} />
+                      <p className="text-sm font-bold text-slate-600">No applications yet.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
           </motion.div>
         )}
       </div>
 
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes shimmer {
-          100% { transform: translateX(100%); }
-        }
-      `}} />
+      {/* Memory Modal */}
+      <AnimatePresence>
+        {isMemoryModalOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#F9F6F0] rounded-2xl shadow-2xl w-full max-w-md border border-white overflow-hidden"
+            >
+              <div className="flex justify-between items-center p-5 border-b border-slate-200/50 bg-white/40">
+                <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                  <BookHeart className="text-rose-500" size={20} /> Log Activity Memory
+                </h3>
+                <button onClick={() => setIsMemoryModalOpen(false)} className="text-slate-400 hover:text-slate-700 transition-colors"><X size={20} /></button>
+              </div>
+              
+              <form onSubmit={handleSaveMemory} className="p-5 space-y-5">
+                <div>
+                  <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Select Your Activity</label>
+                  {applications.length > 0 ? (
+                    <select 
+                      required
+                      value={newMemory.opportunityId}
+                      onChange={(e) => setNewMemory({
+                        ...newMemory, 
+                        opportunityId: e.target.value,
+                        opportunityTitle: e.target.options[e.target.selectedIndex].text
+                      })}
+                      className={inputClass}
+                    >
+                      <option value="" disabled>Choose an applied opportunity...</option>
+                      {applications.map(app => (
+                        <option key={app._id} value={app.opportunityId?._id || app._id}>
+                          {app.opportunityId?.title || app.title || "Unknown Activity"}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl text-sm text-rose-600 font-medium">
+                      You must apply to an opportunity first before logging a memory.
+                    </div>
+                  )}
+                </div>
+                
+                {applications.length > 0 && (
+                  <>
+                    <div>
+                      <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Experience Rating</label>
+                      <div className="flex gap-2">
+                        {[1, 2, 3, 4, 5].map(star => (
+                          <button 
+                            type="button" 
+                            key={star} 
+                            onClick={() => setNewMemory({...newMemory, rating: star})}
+                            className={`p-2 rounded-xl transition-all ${newMemory.rating >= star ? 'text-amber-500 bg-amber-50 shadow-sm border border-amber-100' : 'text-slate-300 hover:text-amber-300'}`}
+                          >
+                            <Star size={24} fill={newMemory.rating >= star ? 'currentColor' : 'none'} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Reflection / Feedback</label>
+                      <textarea 
+                        required
+                        rows="4" 
+                        placeholder="What did you learn? How was the experience?"
+                        value={newMemory.text}
+                        onChange={(e) => setNewMemory({...newMemory, text: e.target.value})}
+                        className={`${inputClass} resize-none`}
+                      ></textarea>
+                    </div>
+
+                    <button type="submit" className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-md shadow-emerald-500/20">
+                      Save to Database
+                    </button>
+                  </>
+                )}
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

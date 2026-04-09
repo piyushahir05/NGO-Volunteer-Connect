@@ -4,7 +4,7 @@ import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import {
   User, MapPin, Phone, Clock, CheckCircle,
-  Edit2, Save, X, AlertCircle, Loader2, Sparkles, Briefcase, Heart
+  Edit2, Save, X, AlertCircle, Loader2, Sparkles, Briefcase, Heart, Plus
 } from 'lucide-react';
 
 /* ───── Animation Variants ───── */
@@ -24,6 +24,8 @@ const glassCardClass = "bg-white/40 backdrop-blur-2xl border border-white/60 sha
 const glassInputClass = "w-full bg-white/50 border border-white/80 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:bg-white/90 transition-all backdrop-blur-sm shadow-inner placeholder:text-slate-400";
 const glassLabelClass = "block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5 ml-1";
 
+const PREDEFINED_SKILLS = ['Tree Planting', 'Teaching', 'Cleaning', 'Technical Support', 'Event Management', 'Graphic Design', 'Mentoring'];
+
 /* ───────────────── Main Component ───────────────── */
 export default function VolunteerProfile() {
   const { user } = useAuth();
@@ -31,6 +33,7 @@ export default function VolunteerProfile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [customSkill, setCustomSkill] = useState('');
   
   // Base State structure
   const [profile, setProfile] = useState({
@@ -40,6 +43,7 @@ export default function VolunteerProfile() {
     location: '',
     phone: '',
     availability: '',
+    gender: ''
   });
 
   const [formData, setFormData] = useState({ ...profile });
@@ -50,7 +54,6 @@ export default function VolunteerProfile() {
       try {
         const { data } = await api.get('/volunteer/profile');
         if (!cancelled) {
-          // Format arrays into comma-separated strings for easy editing
           const formattedData = {
             bio: data.bio || '',
             skills: Array.isArray(data.skills) ? data.skills.join(', ') : data.skills || '',
@@ -58,6 +61,7 @@ export default function VolunteerProfile() {
             location: data.location || '',
             phone: data.phone || '',
             availability: data.availability || '',
+            gender: data.gender || ''
           };
           setProfile(formattedData);
           setFormData(formattedData);
@@ -76,12 +80,35 @@ export default function VolunteerProfile() {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  const handleAddCustomSkill = (e) => {
+    e?.preventDefault();
+    if (!customSkill.trim()) return;
+    const currentSkills = formData.skills ? formData.skills.split(',').map(s => s.trim()).filter(Boolean) : [];
+    if (!currentSkills.includes(customSkill.trim())) {
+      setFormData(prev => ({ ...prev, skills: [...currentSkills, customSkill.trim()].join(', ') }));
+    }
+    setCustomSkill('');
+  };
+
+  const removeSkill = (skillToRemove) => {
+    const currentSkills = formData.skills ? formData.skills.split(',').map(s => s.trim()).filter(Boolean) : [];
+    setFormData(prev => ({ ...prev, skills: currentSkills.filter(s => s !== skillToRemove).join(', ') }));
+  };
+
+  const togglePredefinedSkill = (skill) => {
+    const currentSkills = formData.skills ? formData.skills.split(',').map(s => s.trim()).filter(Boolean) : [];
+    if (currentSkills.includes(skill)) {
+      setFormData(prev => ({ ...prev, skills: currentSkills.filter(s => s !== skill).join(', ') }));
+    } else {
+      setFormData(prev => ({ ...prev, skills: [...currentSkills, skill].join(', ') }));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
     setError(null);
     try {
-      // Transform strings back to arrays before sending to backend
       const payload = {
         ...formData,
         skills: formData.skills.split(',').map(s => s.trim()).filter(Boolean),
@@ -89,7 +116,7 @@ export default function VolunteerProfile() {
       };
       await api.put('/volunteer/profile', payload);
       setProfile(formData);
-      setIsEditing(false); // Switch back to View Mode on success
+      setIsEditing(false);
     } catch (err) {
       setError(err.message || 'Failed to update profile.');
     } finally {
@@ -97,9 +124,12 @@ export default function VolunteerProfile() {
     }
   };
 
-  const initials = user?.name ? user.name.charAt(0).toUpperCase() : '?';
   const skillsArray = profile.skills ? profile.skills.split(',').map(s => s.trim()).filter(Boolean) : [];
   const interestsArray = profile.interests ? profile.interests.split(',').map(s => s.trim()).filter(Boolean) : [];
+  
+  // Determine Profile Image based on Gender
+  const isFemale = profile.gender?.toLowerCase() === 'female';
+  const profileImgSrc = isFemale ? '/p2.jpg' : '/p1.jpg';
 
   return (
     <div className="relative min-h-screen bg-[#F9F6F0] overflow-hidden py-6 px-4 sm:px-6 lg:px-8 font-sans selection:bg-emerald-200 selection:text-emerald-900">
@@ -138,7 +168,7 @@ export default function VolunteerProfile() {
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 relative z-10">
                 <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 p-1 shadow-md flex-shrink-0">
                   <div className="w-full h-full bg-white rounded-full flex items-center justify-center relative overflow-hidden">
-                    <span className="text-emerald-700 font-display font-extrabold text-4xl">{initials}</span>
+                    <img src={profileImgSrc} alt="Profile Avatar" className="w-full h-full object-cover" />
                   </div>
                   <div className="absolute bottom-0 right-0 w-7 h-7 bg-emerald-500 border-2 border-white rounded-full flex items-center justify-center shadow-sm">
                     <CheckCircle size={14} className="text-white" strokeWidth={3} />
@@ -198,7 +228,7 @@ export default function VolunteerProfile() {
                       <div className={`${glassCardClass} p-6`}>
                         <div className="flex items-center gap-2 mb-4 text-blue-600">
                           <Briefcase size={18} strokeWidth={2.5} />
-                          <h2 className="font-display text-base font-bold text-slate-800">Skills & Talents</h2>
+                          <h2 className="font-display text-base font-bold text-slate-800">Interests / Skills</h2>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {skillsArray.length > 0 ? skillsArray.map((skill, idx) => (
@@ -299,16 +329,63 @@ export default function VolunteerProfile() {
                       ></textarea>
                     </div>
 
-                    <div>
-                      <label className={glassLabelClass}>Skills <span className="text-slate-400 font-semibold normal-case">(Separate with commas)</span></label>
-                      <input
-                        type="text"
-                        name="skills"
-                        value={formData.skills}
-                        onChange={handleChange}
-                        placeholder="e.g. Graphic Design, Tutoring, Event Planning"
-                        className={glassInputClass}
-                      />
+                    {/* Interactive Interests/Skills Editor */}
+                    <div className="md:col-span-2 bg-white/30 p-4 rounded-xl border border-white/50">
+                      <label className={glassLabelClass}>Interests / Skills</label>
+                      
+                      <div className="mb-4">
+                        <p className="text-xs text-slate-500 mb-2 font-medium">Select common skills or add your own:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {PREDEFINED_SKILLS.map(skill => {
+                            const currentSkills = formData.skills ? formData.skills.split(',').map(s => s.trim()).filter(Boolean) : [];
+                            const isSelected = currentSkills.includes(skill);
+                            return (
+                              <button
+                                type="button"
+                                key={skill}
+                                onClick={() => togglePredefinedSkill(skill)}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 border ${
+                                  isSelected 
+                                    ? 'bg-emerald-500 text-white border-emerald-500 shadow-md' 
+                                    : 'bg-white/60 text-slate-600 border-white/80 hover:bg-white/90 hover:shadow-sm'
+                                }`}
+                              >
+                                {skill}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 items-center mb-4">
+                        <input
+                          type="text"
+                          value={customSkill}
+                          onChange={(e) => setCustomSkill(e.target.value)}
+                          onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleAddCustomSkill(); } }}
+                          placeholder="Add custom interest/skill..."
+                          className={glassInputClass}
+                        />
+                        <button 
+                          type="button" 
+                          onClick={handleAddCustomSkill} 
+                          className="p-2.5 bg-emerald-100 text-emerald-700 rounded-xl hover:bg-emerald-200 transition-colors"
+                        >
+                          <Plus size={20} />
+                        </button>
+                      </div>
+
+                      {/* Display current skills as removable tags */}
+                      <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200/50">
+                        {formData.skills ? formData.skills.split(',').map(s => s.trim()).filter(Boolean).map((skill, idx) => (
+                          <span key={idx} className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs font-bold">
+                            {skill}
+                            <button type="button" onClick={() => removeSkill(skill)} className="text-emerald-500 hover:text-emerald-700">
+                              <X size={14} />
+                            </button>
+                          </span>
+                        )) : <span className="text-xs text-slate-400">No skills added yet.</span>}
+                      </div>
                     </div>
 
                     <div>
@@ -353,7 +430,7 @@ export default function VolunteerProfile() {
                       </div>
                     </div>
 
-                    <div className="md:col-span-2">
+                    <div>
                       <label className={glassLabelClass}>Availability</label>
                       <div className="relative">
                         <Clock size={18} className="absolute left-4 top-2.5 text-slate-400" />
@@ -362,7 +439,7 @@ export default function VolunteerProfile() {
                           name="availability"
                           value={formData.availability}
                           onChange={handleChange}
-                          placeholder="e.g. Weekends only, Tuesday evenings, Flexible"
+                          placeholder="e.g. Weekends only, Tuesday evenings"
                           className={`${glassInputClass} pl-12`}
                         />
                       </div>

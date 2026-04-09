@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import NotificationPanel from './NotificationPanel';
 import {
   LayoutDashboard, User, Briefcase, FileText,
-  Building2, CalendarDays, Bell, Menu, X, LogOut,
+  Building2, CalendarDays, Bell, Menu, LogOut,
   ChevronRight
 } from 'lucide-react';
 
@@ -23,25 +22,20 @@ const ngoNav = [
   { to: '/ngo/events', label: 'My Events', icon: CalendarDays },
 ];
 
-const sidebarVariants = {
-  hidden: { x: '-100%', opacity: 0 },
-  visible: { x: 0, opacity: 1 },
-  exit: { x: '-100%', opacity: 0 },
-};
-
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
   const { unreadCount } = useNotifications();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [notifOpen, setNotifOpen] = useState(false);
 
   const nav = user?.role === 'Volunteer' ? volunteerNav : ngoNav;
-  const initials = user?.name ? user.name.charAt(0).toUpperCase() : '?';
+  
+  const isFemale = user?.gender?.toLowerCase() === 'female';
+  const profileImgSrc = isFemale ? '/p2.jpg' : '/p1.jpg';
 
-  // ✅ Keep HEAD feature (page title)
   const currentPage = nav.find(item => item.to === location.pathname) || { label: 'Overview' };
 
   const handleLogout = () => {
@@ -51,123 +45,135 @@ export default function Layout({ children }) {
 
   useEffect(() => {
     const onKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        setSidebarOpen(false);
-        setNotifOpen(false);
-      }
+      if (e.key === 'Escape') setNotifOpen(false);
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  // ✅ Keep second branch improvement
   useEffect(() => {
-    setSidebarOpen(false);
-  }, [location.pathname]);
-
-    const SidebarContent = () => (
-    <div className="flex flex-col h-full">
-
-      {/* Brand */}
-      <div className="p-6 border-b border-white/50 bg-white/60 backdrop-blur-xl">
-        <Link to={user?.role === 'NGO' ? '/ngo' : '/volunteer'} className="flex items-center gap-3">
-          <img src="/logo.png" className="w-10 h-10" />
-          <span className="text-lg font-bold text-slate-800">
-            Volunteer<span className="text-emerald-600">Connect</span>
-          </span>
-        </Link>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
-        {nav.map((item) => {
-          const active = location.pathname === item.to;
-          return (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition ${
-                active
-                  ? 'bg-emerald-100 text-emerald-700 font-bold'
-                  : 'text-slate-500 hover:bg-white'
-              }`}
-            >
-              <item.icon size={18} />
-              {item.label}
-              {active && <ChevronRight size={16} className="ml-auto" />}
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* Logout */}
-      <div className="p-4 border-t">
-        <button onClick={handleLogout} className="flex gap-2 text-red-500">
-          <LogOut size={18} /> Logout
-        </button>
-      </div>
-    </div>
-  );
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    handleResize(); 
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
-    <div className="min-h-screen flex bg-[#F9F6F0]">
+    <div className="h-screen w-full flex bg-[#F9F6F0] overflow-hidden">
 
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:block w-64">
-        <SidebarContent />
+      <aside 
+        className={`transition-all duration-300 ease-in-out flex flex-col h-full bg-[#FFFBF0] backdrop-blur-xl border-r border-slate-200 z-40 shrink-0 ${
+          isSidebarOpen ? 'w-64' : 'w-20'
+        }`}
+      >
+        <div className={`p-4 border-b border-slate-200 min-h-[72px] flex items-center transition-all duration-300 ${isSidebarOpen ? 'justify-start px-6' : 'justify-center px-0'}`}>
+          <Link to={user?.role === 'NGO' ? '/ngo' : '/volunteer'} className="flex items-center gap-3 overflow-hidden" title="Home">
+            <img src="/logo.png" alt="Logo" className="w-10 h-10 shrink-0" />
+            {isSidebarOpen && (
+              <span className="text-lg font-bold text-slate-800 whitespace-nowrap">
+                Volunteer<span className="text-emerald-600">Connect</span>
+              </span>
+            )}
+          </Link>
+        </div>
+
+        <nav className="flex-1 p-3 space-y-2 overflow-y-auto overflow-x-hidden custom-scrollbar">
+          {nav.map((item) => {
+            const active = location.pathname === item.to;
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                title={!isSidebarOpen ? item.label : ''} 
+                className={`flex items-center gap-3 py-3 rounded-xl text-sm transition-all duration-200 ${
+                  isSidebarOpen ? 'px-4 justify-start' : 'px-0 justify-center'
+                } ${
+                  active
+                    ? 'bg-emerald-100 text-emerald-700 font-bold'
+                    : 'text-slate-500 hover:bg-amber-50 hover:text-slate-800'
+                }`}
+              >
+                <item.icon size={22} className="shrink-0" />
+                {isSidebarOpen && (
+                  <>
+                    <span className="whitespace-nowrap">{item.label}</span>
+                    {active && <ChevronRight size={16} className="ml-auto shrink-0" />}
+                  </>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="p-3 border-t border-slate-200 shrink-0">
+          <button 
+            onClick={handleLogout} 
+            title={!isSidebarOpen ? "Logout" : ""}
+            className={`flex items-center gap-3 w-full py-3 rounded-xl text-red-500 hover:bg-red-50 transition-all duration-200 ${
+              isSidebarOpen ? 'px-4 justify-start' : 'px-0 justify-center'
+            }`}
+          >
+            <LogOut size={22} className="shrink-0" />
+            {isSidebarOpen && <span className="font-semibold whitespace-nowrap">Logout</span>}
+          </button>
+        </div>
       </aside>
 
-      {/* Mobile Sidebar */}
-      <AnimatePresence>
-        {sidebarOpen && (
-          <motion.aside
-            variants={sidebarVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            className="fixed left-0 top-0 w-64 h-full bg-white z-50"
-          >
-            <SidebarContent />
-          </motion.aside>
-        )}
-      </AnimatePresence>
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
 
-      {/* Main */}
-      <div className="flex-1 flex flex-col">
-
-        {/* Header */}
-        <header className="flex justify-between items-center p-4 bg-white border-b">
-
-          <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)}>
-              <Menu />
+        <header className="flex justify-between items-center p-4 min-h-[72px] bg-[#FFFBF0] border-b border-slate-200 shrink-0 z-30">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-2 rounded-lg text-slate-600 hover:bg-amber-100 transition-colors"
+              aria-label="Toggle Sidebar"
+            >
+              <Menu size={24} />
             </button>
-
-            <h1 className="font-bold text-xl">
+            <h1 className="font-bold text-xl text-slate-800 truncate">
               {currentPage.label}
             </h1>
           </div>
 
-          <div className="flex items-center gap-4">
-
-            {/* Notifications */}
-            <button onClick={() => setNotifOpen(!notifOpen)} className="relative">
-              <Bell />
-              {unreadCount > 0 && (
-                <span className="absolute top-0 right-0 text-xs bg-green-500 text-white px-1 rounded">
-                  {unreadCount}
-                </span>
+          <div className="flex items-center gap-5">
+            <div className="relative">
+              <button 
+                onClick={() => setNotifOpen(!notifOpen)} 
+                className="relative p-2 text-slate-600 hover:bg-amber-100 rounded-full transition-colors"
+              >
+                <Bell size={22} />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full border-2 border-[#FFFBF0]">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              {notifOpen && (
+                <div className="absolute right-0 mt-2 z-50">
+                  <NotificationPanel onClose={() => setNotifOpen(false)} />
+                </div>
               )}
-            </button>
+            </div>
 
-            {/* Profile */}
-            <div className="font-bold">{initials}</div>
+            <Link 
+              to={user?.role === 'NGO' ? '/ngo/profile' : '/volunteer/profile'}
+              className="w-10 h-10 rounded-full border-2 border-emerald-500 shadow-sm overflow-hidden cursor-pointer select-none bg-white block transition-transform hover:scale-105"
+            >
+              <img src={profileImgSrc} alt="User Avatar" className="w-full h-full object-cover" />
+            </Link>
           </div>
         </header>
 
-        {/* Content */}
-        <main className="p-6">
-          {children}
+        <main className="flex-1 overflow-y-auto p-6 bg-[#F9F6F0]">
+          <div className="max-w-7xl mx-auto w-full pb-8">
+            {children}
+          </div>
         </main>
       </div>
     </div>

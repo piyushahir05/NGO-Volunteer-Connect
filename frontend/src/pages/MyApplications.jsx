@@ -1,166 +1,147 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../lib/api';
-import {
-  MapPin, Clock, Building2,
-  CheckCircle, XCircle, Clock3, Inbox, ChevronRight
-} from 'lucide-react';
+import { MapPin, Clock, Briefcase, CheckCircle, XCircle, Clock3, AlertCircle, Loader2, FileText } from 'lucide-react';
 
-const STATUS = {
-  Pending:  { label: 'Pending',  icon: Clock3,       colorClass: 'text-amber-700',  bgClass: 'bg-amber-50',  borderClass: 'border-amber-200' },
-  Accepted: { label: 'Accepted', icon: CheckCircle,   colorClass: 'text-primary-700', bgClass: 'bg-primary-50', borderClass: 'border-primary-200' },
-  Rejected: { label: 'Rejected', icon: XCircle,       colorClass: 'text-red-700',    bgClass: 'bg-red-50',    borderClass: 'border-red-200' },
+/* ───── Animation Variants ───── */
+const fadeUp = {
+  hidden: { opacity: 0, y: 15 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } }
 };
 
-function StatusBadge({ status }) {
-  const s = STATUS[status] || { label: status, icon: Clock3, colorClass: 'text-slate-600', bgClass: 'bg-slate-50', borderClass: 'border-slate-200' };
-  const Icon = s.icon;
-  return (
-    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full border text-xs font-semibold whitespace-nowrap ${s.colorClass} ${s.bgClass} ${s.borderClass}`}>
-      <Icon size={12} /> {s.label}
-    </span>
-  );
-}
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.08 } }
+};
 
-function SkeletonRow() {
-  return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center justify-between gap-4 pointer-events-none">
-      <div className="flex-1 space-y-2">
-        <div className="h-4 rounded-full bg-slate-200 animate-pulse w-3/4" />
-        <div className="h-3 rounded-full bg-slate-200 animate-pulse w-2/5" />
-      </div>
-      <div className="h-7 w-20 rounded-full bg-slate-200 animate-pulse" />
-    </div>
-  );
-}
+/* ───── Premium Glass Classes ───── */
+const glassCardClass = "bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[0_4px_24px_rgba(5,150,105,0.04)] rounded-[1.5rem] overflow-hidden hover:bg-white/50 transition-colors duration-300";
 
 export default function MyApplications() {
   const [applications, setApplications] = useState([]);
-  const [loading, setLoading]           = useState(true);
-  const [filter, setFilter]             = useState('All');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    api.get('/volunteer/applications')
-      .then((res) => setApplications(res.data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    async function fetchApplications() {
+      try {
+        // Fetch logic based on the backend routes structure.
+        // Assuming there is an endpoint that returns the current user's applications
+        const { data } = await api.get('/volunteer/applications');
+        if (!cancelled) setApplications(data);
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Failed to load applications.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchApplications();
+    return () => { cancelled = true; };
   }, []);
 
-  const counts = {
-    All:      applications.length,
-    Pending:  applications.filter((a) => a.status === 'Pending').length,
-    Accepted: applications.filter((a) => a.status === 'Accepted').length,
-    Rejected: applications.filter((a) => a.status === 'Rejected').length,
+  const getStatusBadge = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'accepted':
+        return (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-bold tracking-widest uppercase">
+            <CheckCircle size={14} /> Accepted
+          </div>
+        );
+      case 'rejected':
+        return (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-100 border border-red-200 text-red-700 text-xs font-bold tracking-widest uppercase">
+            <XCircle size={14} /> Rejected
+          </div>
+        );
+      default: // pending
+        return (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 border border-amber-200 text-amber-700 text-xs font-bold tracking-widest uppercase">
+            <Clock3 size={14} /> Pending
+          </div>
+        );
+    }
   };
 
-  const filtered = filter === 'All' ? applications : applications.filter((a) => a.status === filter);
-
   return (
-    <div className="max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight mb-1">My Applications</h1>
-        <p className="text-slate-500">Track the status of every opportunity you've applied for.</p>
-      </div>
+    <div className="relative min-h-screen bg-[#F9F6F0] overflow-hidden py-6 px-4 sm:px-6 lg:px-8 font-sans selection:bg-emerald-200 selection:text-emerald-900">
+      
+      {/* Ambient Background Blobs */}
+      <div className="fixed top-[0%] left-[-10%] w-[35vw] h-[35vw] rounded-full bg-emerald-300/20 blur-[100px] pointer-events-none mix-blend-multiply animate-[pulse_8s_ease-in-out_infinite]" />
+      <div className="fixed bottom-[-10%] right-[-5%] w-[45vw] h-[45vw] rounded-full bg-teal-200/25 blur-[120px] pointer-events-none mix-blend-multiply animate-[pulse_10s_ease-in-out_infinite_reverse]" />
+      
+      <div className="relative z-10 max-w-5xl mx-auto space-y-8">
+        
+        {/* Header */}
+        <motion.div initial="hidden" animate="visible" variants={fadeUp}>
+          <h1 className="font-display text-3xl font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
+            <FileText className="text-emerald-500" size={28} />
+            My Applications
+          </h1>
+          <p className="text-sm font-bold text-slate-500 mt-1">Track the status of opportunities you've applied for.</p>
+        </motion.div>
 
-      {/* Stats */}
-      {!loading && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-          {[
-            { label: 'Total',    val: counts.All },
-            { label: 'Pending',  val: counts.Pending },
-            { label: 'Accepted', val: counts.Accepted },
-            { label: 'Rejected', val: counts.Rejected },
-          ].map((s) => (
-            <div key={s.label} className="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
-              <div className="text-2xl font-bold text-slate-800 leading-none">{s.val}</div>
-              <div className="text-xs text-slate-400 mt-1 tracking-wide">{s.label}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Filter tabs */}
-      {!loading && applications.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-5">
-          {['All', 'Pending', 'Accepted', 'Rejected'].map((f) => (
-            <button
-              key={f}
-              className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${
-                filter === f
-                  ? 'bg-primary-600 border-primary-600 text-white'
-                  : 'bg-white border-slate-200 text-slate-600 hover:border-primary-200 hover:text-primary-700'
-              }`}
-              onClick={() => setFilter(f)}
-            >
-              {f}
-              <span className={`px-1.5 py-0.5 rounded-full text-xs ${filter === f ? 'bg-white/25' : 'bg-slate-100 text-slate-400'}`}>
-                {counts[f]}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* List */}
-      <div className="flex flex-col gap-3">
         {loading ? (
-          [...Array(4)].map((_, i) => <SkeletonRow key={i} />)
-        ) : filtered.length === 0 && applications.length === 0 ? (
-          <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-14 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-primary-50 border border-primary-200 flex items-center justify-center mx-auto mb-4">
-              <Inbox size={26} className="text-primary-600" />
+          <div className="flex flex-col items-center justify-center py-32 h-[50vh]">
+            <div className="relative w-12 h-12 flex items-center justify-center">
+               <div className="absolute inset-0 rounded-full border-4 border-emerald-100"></div>
+               <div className="absolute inset-0 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin"></div>
             </div>
-            <div className="text-base font-bold text-slate-800 mb-1">No applications yet</div>
-            <p className="text-sm text-slate-400 mb-5">Browse open opportunities and apply to ones that match your skills.</p>
-            <Link
-              to="/volunteer/opportunities"
-              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors"
-            >
-              Browse Opportunities <ChevronRight size={14} />
-            </Link>
+            <span className="mt-4 text-xs font-bold tracking-widest text-emerald-600 uppercase">Loading Applications...</span>
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-14 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-primary-50 border border-primary-200 flex items-center justify-center mx-auto mb-4">
-              <Inbox size={26} className="text-primary-600" />
-            </div>
-            <div className="text-base font-bold text-slate-800 mb-1">No {filter.toLowerCase()} applications</div>
-            <p className="text-sm text-slate-400">Try a different filter above.</p>
-          </div>
+        ) : error ? (
+          <motion.div initial="hidden" animate="visible" variants={fadeUp} className="bg-red-50/80 backdrop-blur-md border border-red-200 rounded-xl p-4 text-sm text-red-700 flex items-center gap-3 shadow-sm">
+            <AlertCircle size={18} className="text-red-500" />
+            <span className="font-medium">{error}</span>
+          </motion.div>
         ) : (
-          filtered.map((app) => (
-            <div
-              key={app._id}
-              className={`bg-white border rounded-2xl p-5 flex items-center justify-between gap-4 flex-wrap hover:shadow-sm transition-shadow ${
-                app.status === 'Accepted' ? 'border-primary-200' : 'border-slate-200'
-              }`}
-            >
-              <div className="flex-1 min-w-0">
-                <div className={`text-base font-bold mb-1.5 ${app.status === 'Rejected' ? 'text-slate-500' : 'text-slate-800'}`}>
-                  {app.title}
+          <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="space-y-4">
+            <AnimatePresence>
+              {applications.length > 0 ? applications.map((app) => (
+                <motion.div key={app._id} variants={fadeUp} layout className={`${glassCardClass} flex flex-col md:flex-row p-6 gap-6 md:items-center justify-between`}>
+                  
+                  <div className="flex-1 space-y-3">
+                    <h2 className="text-xl font-bold text-slate-800 leading-tight">
+                      {app.opportunityId?.title || app.title || "Opportunity Details"}
+                    </h2>
+                    
+                    <div className="flex flex-wrap items-center gap-4 pt-1">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+                        <MapPin size={16} className="text-emerald-500" />
+                        {app.opportunityId?.location || app.location || "Location not specified"}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+                        <Clock size={16} className="text-blue-500" />
+                        {app.opportunityId?.duration || app.duration || "Duration not specified"}
+                      </div>
+                      <div className="flex items-start gap-2 text-sm font-semibold text-slate-600">
+                        <Briefcase size={16} className="text-amber-500" />
+                        <span className="truncate max-w-[200px]">
+                          {(app.opportunityId?.requiredSkills || app.requiredSkills || []).join(', ') || "No specific skills"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col md:items-end gap-3 shrink-0 border-t md:border-t-0 md:border-l border-slate-200/50 pt-4 md:pt-0 md:pl-6">
+                    {getStatusBadge(app.status)}
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      Applied: {new Date(app.createdAt || Date.now()).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                </motion.div>
+              )) : (
+                <div className="py-16 text-center">
+                  <div className="w-16 h-16 bg-white/60 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-white">
+                    <FileText size={24} className="text-emerald-300" />
+                  </div>
+                  <p className="text-slate-500 font-bold text-lg">You haven't applied to any opportunities yet.</p>
+                  <p className="text-sm text-slate-400 font-medium mt-1">Head over to the Opportunities tab to find your match!</p>
                 </div>
-                <div className="flex flex-wrap gap-3">
-                  {app.ngoName && (
-                    <span className="inline-flex items-center gap-1 text-xs text-slate-400">
-                      <Building2 size={12} /> {app.ngoName}
-                    </span>
-                  )}
-                  {app.location && (
-                    <span className="inline-flex items-center gap-1 text-xs text-slate-400">
-                      <MapPin size={12} /> {app.location}
-                    </span>
-                  )}
-                  {app.duration && (
-                    <span className="inline-flex items-center gap-1 text-xs text-slate-400">
-                      <Clock size={12} /> {app.duration}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <StatusBadge status={app.status} />
-            </div>
-          ))
+              )}
+            </AnimatePresence>
+          </motion.div>
         )}
       </div>
     </div>

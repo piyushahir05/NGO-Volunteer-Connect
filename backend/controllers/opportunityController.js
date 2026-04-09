@@ -94,26 +94,39 @@ exports.updateApplicationStatus = async (req, res, next) => {
       return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
     }
     const { status } = req.body;
+    
+    // Populate ngoId to get the NGO's actual name for the personalized notification
     const opp = await Opportunity.findOne({ _id: req.params.oppId, ngoId: req.user._id })
       .populate('ngoId', 'name');
+      
     if (!opp) return res.status(404).json({ message: 'Opportunity not found' });
+    
     const applicant = opp.applicants.id(req.params.applicantId);
     if (!applicant) return res.status(404).json({ message: 'Application not found' });
+    
+    // Update and save status
     applicant.status = status;
     await opp.save();
 
+    // Construct the personalized notification message
+    const ngoName = opp.ngoId?.name || 'An NGO';
     const message =
       status === 'Accepted'
-        ? `${opp.ngoId?.name || 'NGO'} accepted your application for "${opp.title}".`
-        : `${opp.ngoId?.name || 'NGO'} declined your application for "${opp.title}".`;
+        ? `Congratulations! ${ngoName} has accepted your application for "${opp.title}".`
+        : `${ngoName} has updated your application status for "${opp.title}" to ${status}.`;
+        
     const notification = await Notification.create({
       recipientId: applicant.volunteerId,
+      userId: applicant.volunteerId, // Including both to cover different schema definitions
       message,
       relatedOpportunityId: opp._id,
       relatedNgoId: req.user._id,
+      isRead: false
     });
+    
     const payload = notification.toObject ? notification.toObject() : notification;
     emitToUser(applicant.volunteerId.toString(), 'notification', payload);
+    
     res.json({ message: `Application ${status.toLowerCase()}`, applicant: applicant.toObject() });
   } catch (err) {
     next(err);

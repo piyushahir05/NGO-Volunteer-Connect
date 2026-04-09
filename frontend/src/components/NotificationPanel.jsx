@@ -1,60 +1,84 @@
-import React, { useRef, useEffect } from 'react';
+import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNotifications } from '../context/NotificationContext';
-import { formatDistanceToNow } from '../lib/date';
+import { CheckCircle, Info, Bell, XCircle } from 'lucide-react';
 
 export default function NotificationPanel({ onClose }) {
-  const { notifications, loading, markRead, markAllRead, unreadCount } = useNotifications();
-  const panelRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target)) onClose();
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [onClose]);
+  const { notifications, markAsRead, markAllAsRead } = useNotifications();
 
   return (
-    <div
-      ref={panelRef}
-      className="absolute right-0 top-full mt-2 w-96 max-h-[80vh] card shadow-lg z-50 overflow-hidden"
+    <motion.div 
+      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+      className="absolute right-0 mt-3 w-80 sm:w-[400px] bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/60 overflow-hidden z-50 origin-top-right"
     >
-      <div className="p-3 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-        <span className="font-semibold text-slate-800">Notifications</span>
-        {unreadCount > 0 && (
-          <button
-            type="button"
-            onClick={markAllRead}
-            className="text-sm text-primary-600 hover:underline"
-          >
-            Mark all read
-          </button>
-        )}
+      <div className="flex items-center justify-between px-5 py-4 bg-emerald-50/50 border-b border-emerald-100/50">
+        <h3 className="font-bold text-slate-800 flex items-center gap-2">
+          <Bell size={18} className="text-emerald-600" /> Notifications
+        </h3>
+        <div className="flex items-center gap-3">
+          {notifications?.some(n => !n.isRead) && (
+            <button 
+              onClick={markAllAsRead}
+              className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 uppercase tracking-widest transition-colors"
+            >
+              Mark all read
+            </button>
+          )}
+        </div>
       </div>
-      <div className="overflow-y-auto max-h-96">
-        {loading ? (
-          <div className="p-6 text-center text-slate-500">Loading...</div>
-        ) : notifications.length === 0 ? (
-          <div className="p-6 text-center text-slate-500">No notifications yet.</div>
-        ) : (
-          <ul className="divide-y divide-slate-100">
-            {notifications.map((n) => (
-              <li
-                key={n._id}
-                className={`p-3 hover:bg-slate-50 cursor-pointer ${!n.isRead ? 'bg-primary-50/50' : ''}`}
-                onClick={() => {
-                  markRead(n._id);
-                }}
+
+      <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+        <AnimatePresence>
+          {notifications && notifications.length > 0 ? notifications.map(notif => {
+            const isAccepted = notif.message.toLowerCase().includes('accepted') || notif.message.toLowerCase().includes('congratulations');
+            
+            return (
+              <motion.div 
+                key={notif._id}
+                layout
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => !notif.isRead && markAsRead(notif._id)}
+                className={`p-4 border-b border-slate-100/50 flex gap-3 cursor-pointer transition-colors ${notif.isRead ? 'bg-white/40' : 'bg-emerald-50/80 hover:bg-emerald-100/50'}`}
               >
-                <p className="text-sm text-slate-800">{n.message}</p>
-                <p className="text-xs text-slate-500 mt-1">
-                  {n.createdAt ? formatDistanceToNow(n.createdAt) : ''}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
+                <div className="shrink-0 mt-1">
+                  {isAccepted ? (
+                    <CheckCircle size={20} className="text-emerald-500" />
+                  ) : notif.message.toLowerCase().includes('rejected') ? (
+                    <XCircle size={20} className="text-red-500" />
+                  ) : (
+                    <Info size={20} className="text-blue-500" />
+                  )}
+                </div>
+                <div className="flex-1 pr-2">
+                  <p className={`text-sm leading-snug ${notif.isRead ? 'text-slate-600 font-medium' : 'text-slate-800 font-bold'}`}>
+                    {notif.message}
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-1.5 font-bold uppercase tracking-wider">
+                    {new Date(notif.createdAt).toLocaleDateString()} at {new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </p>
+                </div>
+                {!notif.isRead && (
+                  <div className="shrink-0 flex items-center justify-center">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+                  </div>
+                )}
+              </motion.div>
+            )
+          }) : (
+            <div className="py-16 text-center flex flex-col items-center justify-center">
+              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+                <Bell size={28} className="text-slate-300" />
+              </div>
+              <p className="text-sm font-bold text-slate-500">You're all caught up!</p>
+              <p className="text-xs text-slate-400 mt-1 font-medium">We'll let you know when NGOs respond.</p>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 }

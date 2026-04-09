@@ -1,204 +1,185 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../lib/api';
-import {
-  MapPin, Clock, Building2,
-  CheckCircle, AlertCircle, Search, Inbox, Send
-} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { MapPin, Clock, Briefcase, Search, Sparkles, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 
-/* ── Single opportunity card ── */
-function OpportunityCard({ opp, applied, onApply }) {
-  const [applying, setApplying] = useState(false);
-  const [err, setErr]           = useState('');
+/* ───── Animation Variants ───── */
+const fadeUp = {
+  hidden: { opacity: 0, y: 15 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } }
+};
 
-  const handleApply = async () => {
-    setApplying(true);
-    setErr('');
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.08 } }
+};
+
+/* ───── Premium Glass Classes ───── */
+const glassCardClass = "bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[0_4px_24px_rgba(5,150,105,0.04)] rounded-[1.5rem] overflow-hidden hover:bg-white/50 transition-colors duration-300";
+const glassInputClass = "w-full bg-white/50 border border-white/80 rounded-xl pl-11 pr-4 py-3 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:bg-white/90 transition-all backdrop-blur-sm shadow-inner placeholder:text-slate-400";
+
+export default function Opportunities() {
+  const { user } = useAuth();
+  const [opportunities, setOpportunities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [applying, setApplying] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchOpportunities() {
+      try {
+        const { data } = await api.get('/opportunities');
+        if (!cancelled) setOpportunities(data);
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Failed to load opportunities.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchOpportunities();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleApply = async (id) => {
+    setApplying(id);
     try {
-      await api.post(`/opportunities/${opp._id}/apply`);
-      onApply(opp._id);
-    } catch (e) {
-      setErr(e.message || 'Apply failed. Please try again.');
+      await api.post(`/opportunities/${id}/apply`);
+      setOpportunities(opportunities.map(opp => 
+        opp._id === id 
+          ? { ...opp, hasApplied: true, applicants: [...(opp.applicants || []), { volunteerId: user._id }] } 
+          : opp
+      ));
+    } catch (err) {
+      alert(err.message || 'Failed to apply.');
     } finally {
-      setApplying(false);
+      setApplying(null);
     }
   };
 
-  return (
-    <div className="group bg-white border border-slate-200 rounded-2xl p-6 flex flex-col gap-3 hover:border-primary-200 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-      {/* Top row */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold">
-          <Building2 size={11} /> {opp.ngoName || 'NGO'}
-        </span>
-        {applied && (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
-            <CheckCircle size={11} /> Applied
-          </span>
-        )}
-      </div>
-
-      {/* Title */}
-      <h3 className="text-base font-bold text-slate-800 leading-snug">{opp.title}</h3>
-
-      {/* Description */}
-      {opp.description && (
-        <p className="text-sm text-slate-500 leading-relaxed line-clamp-2">{opp.description}</p>
-      )}
-
-      {/* Skills */}
-      {opp.requiredSkills?.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {opp.requiredSkills.slice(0, 4).map((s) => (
-            <span key={s} className="px-2.5 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-500 text-xs font-medium">{s}</span>
-          ))}
-        </div>
-      )}
-
-      {/* Meta */}
-      <div className="flex flex-wrap gap-3">
-        {opp.location && (
-          <span className="inline-flex items-center gap-1 text-xs text-slate-400">
-            <MapPin size={12} /> {opp.location}
-          </span>
-        )}
-        {opp.duration && (
-          <span className="inline-flex items-center gap-1 text-xs text-slate-400">
-            <Clock size={12} /> {opp.duration}
-          </span>
-        )}
-      </div>
-
-      {/* Action */}
-      <div className="mt-auto pt-1">
-        {applied ? (
-          <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary-600">
-            <CheckCircle size={14} /> Application sent
-          </span>
-        ) : (
-          <>
-            <button
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-              onClick={handleApply}
-              disabled={applying}
-            >
-              <Send size={13} />
-              {applying ? 'Applying…' : 'Apply now'}
-            </button>
-            {err && (
-              <p className="flex items-center gap-1 text-xs text-red-600 mt-2">
-                <AlertCircle size={12} /> {err}
-              </p>
-            )}
-          </>
-        )}
-      </div>
-    </div>
+  const filteredOpportunities = opportunities.filter(opp => 
+    opp.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    opp.requiredSkills?.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase()))
   );
-}
-
-/* ── Page skeleton loader ── */
-function SkeletonCard() {
-  return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col gap-3 pointer-events-none">
-      <div className="h-3 rounded-full bg-slate-200 animate-pulse w-2/5" />
-      <div className="h-4 rounded-full bg-slate-200 animate-pulse w-4/5 mt-2" />
-      <div className="h-3 rounded-full bg-slate-200 animate-pulse w-3/4" />
-      <div className="h-3 rounded-full bg-slate-200 animate-pulse w-3/4" />
-      <div className="h-3 rounded-full bg-slate-200 animate-pulse w-2/5 mt-2" />
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════ */
-export default function Opportunities() {
-  const [opportunities, setOpportunities] = useState([]);
-  const [applications, setApplications]   = useState([]);
-  const [loading, setLoading]             = useState(true);
-  const [search, setSearch]               = useState('');
-
-  useEffect(() => {
-    Promise.all([api.get('/opportunities'), api.get('/volunteer/applications')])
-      .then(([oppRes, appRes]) => {
-        setOpportunities(oppRes.data);
-        setApplications(appRes.data);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  const appliedIds = applications.map((a) => a._id);
-
-  const handleApplied = (id) => {
-    setApplications((prev) => [...prev, { _id: id, status: 'Pending' }]);
-  };
-
-  const filtered = opportunities.filter((o) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      o.title?.toLowerCase().includes(q) ||
-      o.ngoName?.toLowerCase().includes(q) ||
-      o.location?.toLowerCase().includes(q) ||
-      o.requiredSkills?.some((s) => s.toLowerCase().includes(q))
-    );
-  });
 
   return (
-    <div className="max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight mb-1">Browse Opportunities</h1>
-          <p className="text-slate-500">Find volunteering events that match your skills and interests.</p>
-        </div>
-        {!loading && (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-50 border border-primary-200 text-primary-700 text-xs font-semibold self-center">
-            {filtered.length} {filtered.length === 1 ? 'opportunity' : 'opportunities'}
-          </span>
-        )}
-      </div>
-
-      {/* Search */}
-      <div className="relative mb-6 max-w-md">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 flex items-center pointer-events-none">
-          <Search size={15} />
-        </span>
-        <input
-          className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 bg-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition"
-          type="text"
-          placeholder="Search by title, NGO, location or skill…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
-      {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {loading ? (
-          [...Array(6)].map((_, i) => <SkeletonCard key={i} />)
-        ) : filtered.length === 0 ? (
-          <div className="col-span-full flex flex-col items-center py-16 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-primary-50 border border-primary-200 flex items-center justify-center mb-4">
-              <Inbox size={28} className="text-primary-600" />
-            </div>
-            <div className="text-base font-bold text-slate-800 mb-1">
-              {search ? 'No results found' : 'No opportunities yet'}
-            </div>
-            <p className="text-sm text-slate-400">
-              {search
-                ? 'Try a different search term.'
-                : 'Check back soon — NGOs are posting new events regularly.'}
-            </p>
+    <div className="relative min-h-screen bg-[#F9F6F0] overflow-hidden py-6 px-4 sm:px-6 lg:px-8 font-sans selection:bg-emerald-200 selection:text-emerald-900">
+      
+      {/* Ambient Background Blobs */}
+      <div className="fixed top-[0%] left-[-10%] w-[35vw] h-[35vw] rounded-full bg-emerald-300/20 blur-[100px] pointer-events-none mix-blend-multiply animate-[pulse_8s_ease-in-out_infinite]" />
+      <div className="fixed bottom-[-10%] right-[-5%] w-[45vw] h-[45vw] rounded-full bg-teal-200/25 blur-[120px] pointer-events-none mix-blend-multiply animate-[pulse_10s_ease-in-out_infinite_reverse]" />
+      
+      <div className="relative z-10 max-w-6xl mx-auto space-y-8">
+        
+        {/* Header & Search */}
+        <motion.div initial="hidden" animate="visible" variants={fadeUp} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="font-display text-3xl font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
+              <Sparkles className="text-emerald-500" size={28} />
+              Discover Opportunities
+            </h1>
+            <p className="text-sm font-bold text-slate-500 mt-1">Find causes that match your skills and passion.</p>
           </div>
-        ) : (
-          filtered.map((opp) => (
-            <OpportunityCard
-              key={opp._id}
-              opp={opp}
-              applied={appliedIds.includes(opp._id)}
-              onApply={handleApplied}
+          
+          <div className="relative w-full md:w-96">
+            <Search size={18} className="absolute left-4 top-3.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by title or skills..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={glassInputClass}
             />
-          ))
+          </div>
+        </motion.div>
+
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-32 h-[50vh]">
+            <div className="relative w-12 h-12 flex items-center justify-center">
+               <div className="absolute inset-0 rounded-full border-4 border-emerald-100"></div>
+               <div className="absolute inset-0 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin"></div>
+            </div>
+            <span className="mt-4 text-xs font-bold tracking-widest text-emerald-600 uppercase">Loading Opportunities...</span>
+          </div>
+        ) : error ? (
+          <motion.div initial="hidden" animate="visible" variants={fadeUp} className="bg-red-50/80 backdrop-blur-md border border-red-200 rounded-xl p-4 text-sm text-red-700 flex items-center gap-3 shadow-sm">
+            <AlertCircle size={18} className="text-red-500" />
+            <span className="font-medium">{error}</span>
+          </motion.div>
+        ) : (
+          <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <AnimatePresence>
+              {filteredOpportunities.length > 0 ? filteredOpportunities.map((opp) => {
+                const hasApplied = opp.hasApplied || opp.applicants?.some(a => a.volunteerId === user?._id);
+                return (
+                  <motion.div key={opp._id} variants={fadeUp} layout className={`${glassCardClass} flex flex-col p-6`}>
+                    <div className="flex-1 space-y-4">
+                      <div className="flex justify-between items-start gap-4">
+                        <h2 className="text-lg font-bold text-slate-800 leading-tight">{opp.title}</h2>
+                      </div>
+                      
+                      <p className="text-sm font-medium text-slate-600 line-clamp-3">
+                        {opp.description || "No description provided."}
+                      </p>
+
+                      <div className="space-y-2 pt-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+                          <MapPin size={16} className="text-emerald-500" />
+                          {opp.location || "Location not specified"}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+                          <Clock size={16} className="text-blue-500" />
+                          {opp.duration || "Duration not specified"}
+                        </div>
+                        <div className="flex items-start gap-2 text-sm font-semibold text-slate-600">
+                          <Briefcase size={16} className="text-amber-500 mt-0.5" />
+                          <div className="flex flex-wrap gap-1.5">
+                            {opp.requiredSkills?.length > 0 ? (
+                              opp.requiredSkills.map((skill, idx) => (
+                                <span key={idx} className="px-2 py-0.5 bg-white/60 border border-white/80 rounded-md text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                                  {skill}
+                                </span>
+                              ))
+                            ) : (
+                              <span>No specific skills</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 pt-4 border-t border-slate-200/50">
+                      <button
+                        onClick={() => handleApply(opp._id)}
+                        disabled={hasApplied || applying === opp._id}
+                        className={`w-full py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-sm ${
+                          hasApplied
+                            ? 'bg-emerald-100 text-emerald-700 cursor-not-allowed border border-emerald-200'
+                            : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-500/20 hover:shadow-md'
+                        }`}
+                      >
+                        {applying === opp._id ? (
+                          <Loader2 size={18} className="animate-spin" />
+                        ) : hasApplied ? (
+                          <>
+                            <CheckCircle size={18} /> Applied
+                          </>
+                        ) : (
+                          'Apply Now'
+                        )}
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              }) : (
+                <div className="col-span-full py-12 text-center">
+                  <p className="text-slate-500 font-bold text-lg">No opportunities found matching your criteria.</p>
+                </div>
+              )}
+            </AnimatePresence>
+          </motion.div>
         )}
       </div>
     </div>

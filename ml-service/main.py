@@ -19,6 +19,7 @@ server is running.
 """
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from recommender import recommend_opportunities, recommend_volunteers, search_opportunities
@@ -36,6 +37,16 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# ---------------------------------------------------------------------------
+# CORS Configuration (Crucial for React Frontend Communication)
+# ---------------------------------------------------------------------------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:5173"], # Allows React/Vite development ports
+    allow_credentials=True,
+    allow_methods=["*"], # Allows all methods including GET, POST, OPTIONS
+    allow_headers=["*"], # Allows all headers
+)
 
 # ---------------------------------------------------------------------------
 # Pydantic request / response models
