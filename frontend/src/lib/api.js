@@ -1,4 +1,4 @@
-const BASE = "https://ngo-volunteer-connect-1.onrender.com/api";
+const BASE = `${import.meta.env.VITE_API_URL}/api`;
 
 async function request(method, path, data = null) {
   const token = localStorage.getItem('token');
