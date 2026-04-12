@@ -6,7 +6,7 @@ import NotificationPanel from './NotificationPanel';
 import {
   LayoutDashboard, User, Briefcase, FileText,
   Building2, CalendarDays, Bell, Menu, LogOut,
-  ChevronRight
+  ChevronRight, MessageSquare 
 } from 'lucide-react';
 
 const volunteerNav = [
@@ -14,12 +14,14 @@ const volunteerNav = [
   { to: '/volunteer/profile', label: 'My Profile', icon: User },
   { to: '/volunteer/opportunities', label: 'Opportunities', icon: Briefcase },
   { to: '/volunteer/applications', label: 'My Applications', icon: FileText },
+  { to: '/volunteer/messages', label: 'Messages', icon: MessageSquare },
 ];
 
 const ngoNav = [
   { to: '/ngo', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/ngo/profile', label: 'Organization', icon: Building2 },
   { to: '/ngo/events', label: 'My Events', icon: CalendarDays },
+  { to: '/ngo/messages', label: 'Messages', icon: MessageSquare },
 ];
 
 export default function Layout({ children }) {

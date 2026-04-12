@@ -5,10 +5,9 @@ import { api } from '../lib/api';
 import {
   Building2, CalendarDays, Users, ArrowRight, Plus,
   ClipboardList, MessageSquare, BarChart3, ChevronRight,
-  Briefcase, Loader2, Sparkles, TrendingUp,
+  Loader2, Sparkles, TrendingUp,
 } from 'lucide-react';
 
-// --- Animation Variants (same as Home/Login/Register) ---
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },
@@ -24,7 +23,6 @@ const fadeIn = {
   visible: { opacity: 1, scale: 1, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
 };
 
-// --- Bar chart colors aligned to site palette ---
 const BAR_COLORS = [
   'bg-primary-500', 'bg-emerald-500', 'bg-teal-500',
   'bg-primary-400', 'bg-emerald-400', 'bg-teal-400',
@@ -32,34 +30,32 @@ const BAR_COLORS = [
 ];
 
 const QUICK_ACTIONS = [
-  { label: 'Create Event',        icon: Plus,          to: '/ngo/events',  desc: 'Launch a new volunteering opportunity' },
-  { label: 'Review Applications', icon: ClipboardList, to: '/ngo/events',  desc: 'Screen and approve pending requests' },
-  { label: 'Message Volunteers',  icon: MessageSquare, to: '/ngo/events',  desc: 'Coordinate with your active team' },
+  { label: 'Create Event', icon: Plus, to: '/ngo/events', desc: 'Launch a new volunteering opportunity' },
+  { label: 'Review Applications', icon: ClipboardList, to: '/ngo/events', desc: 'Screen and approve pending requests' },
+  { label: 'Message Volunteers', icon: MessageSquare, to: '/ngo/messages', desc: 'Coordinate with your active team' },
 ];
 
-// KPI accent config — warm/light palette matching #F9F6F0 site
 const KPI_ACCENTS = {
   emerald: {
     wrap: 'bg-emerald-50 border-emerald-100',
     icon: 'bg-emerald-100 text-emerald-600',
-    val:  'text-emerald-700',
-    lbl:  'text-emerald-600',
+    val: 'text-emerald-700',
+    lbl: 'text-emerald-600',
   },
   blue: {
     wrap: 'bg-teal-50 border-teal-100',
     icon: 'bg-teal-100 text-teal-600',
-    val:  'text-teal-700',
-    lbl:  'text-teal-600',
+    val: 'text-teal-700',
+    lbl: 'text-teal-600',
   },
   amber: {
     wrap: 'bg-primary-50 border-primary-100',
     icon: 'bg-primary-100 text-primary-600',
-    val:  'text-primary-700',
-    lbl:  'text-primary-600',
+    val: 'text-primary-700',
+    lbl: 'text-primary-600',
   },
 };
 
-// --- Ambient background blobs ---
 function FloatingOrbs() {
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -70,11 +66,10 @@ function FloatingOrbs() {
 }
 
 export default function NGODashboard() {
-  const [stats, setStats]   = useState(null);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError]   = useState(null);
+  const [error, setError] = useState(null);
 
-  // Scroll progress bar
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
 
@@ -96,10 +91,10 @@ export default function NGODashboard() {
 
   const kpiCards = useMemo(() => stats
     ? [
-        { label: 'Active Events',        value: String(stats.activeEvents),        icon: CalendarDays,  accent: 'emerald' },
-        { label: 'Total Volunteers',      value: String(stats.totalVolunteers),      icon: Users,         accent: 'blue' },
-        { label: 'Pending Applications',  value: String(stats.pendingApplications),  icon: ClipboardList, accent: 'amber' },
-      ]
+      { label: 'Active Events', value: String(stats.activeEvents), icon: CalendarDays, accent: 'emerald' },
+      { label: 'Total Volunteers', value: String(stats.totalVolunteers), icon: Users, accent: 'blue' },
+      { label: 'Pending Applications', value: String(stats.pendingApplications), icon: ClipboardList, accent: 'amber' },
+    ]
     : [], [stats]);
 
   const events = stats?.events || [];
@@ -116,45 +111,9 @@ export default function NGODashboard() {
 
       <FloatingOrbs />
 
-      {/* ── HEADER ── */}
-      <motion.header
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.6 }}
-        className="sticky top-0 z-50 bg-[#F9F6F0]/80 backdrop-blur-md border-b border-[#E8E3D9]"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex justify-between items-center">
-          <Link to="/" className="flex items-center gap-3 no-underline group">
-            <img
-              src="/logo.png"
-              alt="VolunteerConnect"
-              className="w-10 h-10 object-contain group-hover:scale-105 transition-transform duration-300"
-            />
-            <span className="font-display text-lg sm:text-xl text-slate-900 font-bold tracking-tight">
-              VolunteerConnect
-            </span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link
-              to="/ngo/profile"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#E8E3D9] text-slate-700 text-sm font-bold hover:border-primary-300 hover:text-primary-700 hover:shadow-md transition-all duration-300"
-            >
-              <Building2 size={14} /> Profile
-            </Link>
-            <Link
-              to="/ngo/events"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-600 text-white text-sm font-bold hover:bg-primary-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
-            >
-              <Plus size={14} /> New Event
-            </Link>
-          </div>
-        </div>
-      </motion.header>
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-24 space-y-10">
 
-      {/* ── PAGE BODY ── */}
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-24 space-y-10">
-
-        {/* ── Page Title ── */}
+        {/* ── Page Title + Action Buttons ── */}
         <motion.div
           initial="hidden"
           animate="visible"
@@ -172,6 +131,22 @@ export default function NGODashboard() {
             <p className="text-base text-slate-500 mt-2 font-medium">
               Real-time overview of your events, team, and operations.
             </p>
+          </motion.div>
+
+          {/* ✅ Action Buttons — match volunteer side */}
+          <motion.div variants={fadeUp} className="flex items-center gap-3 flex-shrink-0">
+            <Link
+              to="/ngo/messages"
+              className="inline-flex items-center gap-2 px-5 py-3 bg-white border border-emerald-200 text-emerald-700 font-bold rounded-xl shadow-sm hover:bg-emerald-50 transition"
+            >
+              <MessageSquare size={18} /> Messages
+            </Link>
+            <Link
+              to="/ngo/events"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md shadow-emerald-500/20 transition-all hover:-translate-y-0.5"
+            >
+              <Plus size={18} /> Add Event
+            </Link>
           </motion.div>
         </motion.div>
 
@@ -211,7 +186,6 @@ export default function NGODashboard() {
                     variants={fadeUp}
                     className={`relative rounded-2xl border p-6 overflow-hidden group hover:-translate-y-1 hover:shadow-lg transition-all duration-300 ${a.wrap}`}
                   >
-                    {/* Subtle background glow */}
                     <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-white/40 blur-2xl pointer-events-none" />
                     <div className="relative z-10 flex items-center gap-4">
                       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${a.icon}`}>
@@ -366,10 +340,7 @@ export default function NGODashboard() {
                   <div className="min-w-0">
                     <div className="text-sm font-bold text-slate-800 flex items-center gap-1">
                       {qa.label}
-                      <ChevronRight
-                        size={14}
-                        className="text-slate-400 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300"
-                      />
+                      <ChevronRight size={14} className="text-slate-400 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
                     </div>
                     <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{qa.desc}</p>
                   </div>

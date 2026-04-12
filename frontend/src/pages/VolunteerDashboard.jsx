@@ -3,10 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { 
-  Sparkles, BrainCircuit, CheckCircle, Clock, 
-  FileText, Briefcase, Activity, BookHeart, 
-  Star, Plus, X, Award
+import {
+  Sparkles, BrainCircuit, CheckCircle, Clock,
+  FileText, Briefcase, Activity, BookHeart,
+  Star, Plus, X, Award, MessageSquare
 } from 'lucide-react';
 
 /* ───── Animation Variants ───── */
@@ -27,7 +27,7 @@ const inputClass = "w-full bg-white/50 border border-white/80 rounded-xl px-4 py
 
 export default function VolunteerDashboard() {
   const { user } = useAuth();
-  
+
   // Data States
   const [profile, setProfile] = useState(null);
   const [stats, setStats] = useState({ total: 0, accepted: 0, pending: 0 });
@@ -42,7 +42,7 @@ export default function VolunteerDashboard() {
 
   useEffect(() => {
     let cancelled = false;
-    
+
     async function fetchDashboardData() {
       try {
         // 1. Fetch Standard Backend Data (Node.js)
@@ -63,7 +63,7 @@ export default function VolunteerDashboard() {
         setProfile(profileData);
         setApplications(apps);
         setMemories(dbMemories);
-        
+
         setStats({
           total: apps.length,
           accepted: apps.filter(a => a.status?.toLowerCase() === 'accepted').length,
@@ -72,9 +72,9 @@ export default function VolunteerDashboard() {
 
         // 2. 🚀 Python FastAPI ML Recommendation Call (Port 8000) 🚀
         try {
-          const userSkills = profileData.skills ? 
+          const userSkills = profileData.skills ?
             (Array.isArray(profileData.skills) ? profileData.skills : profileData.skills.split(','))
-            .map(s => s.trim().toLowerCase()).filter(Boolean) : [];
+              .map(s => s.trim().toLowerCase()).filter(Boolean) : [];
 
           // Format payload strictly to match Python's RecommendOpportunitiesRequest
           const mlPayload = {
@@ -129,7 +129,7 @@ export default function VolunteerDashboard() {
   const handleSaveMemory = async (e) => {
     e.preventDefault();
     if (!newMemory.text.trim() || !newMemory.opportunityId) return;
-    
+
     try {
       const memoryPayload = {
         opportunityId: newMemory.opportunityId,
@@ -166,13 +166,13 @@ export default function VolunteerDashboard() {
 
   return (
     <div className="relative min-h-screen bg-[#F9F6F0] overflow-hidden py-6 px-4 sm:px-6 lg:px-8 font-sans selection:bg-emerald-200 selection:text-emerald-900">
-      
+
       {/* Background Ambience */}
       <div className="fixed top-[0%] left-[-10%] w-[35vw] h-[35vw] rounded-full bg-emerald-300/20 blur-[100px] pointer-events-none mix-blend-multiply animate-[pulse_8s_ease-in-out_infinite]" />
       <div className="fixed bottom-[-10%] right-[-5%] w-[45vw] h-[45vw] rounded-full bg-teal-200/25 blur-[120px] pointer-events-none mix-blend-multiply animate-[pulse_10s_ease-in-out_infinite_reverse]" />
-      
+
       <div className="relative z-10 max-w-6xl mx-auto space-y-8">
-        
+
         {/* Header */}
         <motion.div initial="hidden" animate="visible" variants={fadeUp} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
@@ -183,10 +183,22 @@ export default function VolunteerDashboard() {
               Welcome back to your dashboard. Here's your impact overview.
             </p>
           </div>
-          
-          <Link to="/volunteer/opportunities" className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md shadow-emerald-500/20 transition-all hover:-translate-y-0.5">
-            <Briefcase size={18} /> Find Opportunities
-          </Link>
+
+          <div className="flex gap-3">
+            <Link
+              to="/volunteer/messages"
+              className="inline-flex items-center gap-2 px-5 py-3 bg-white border border-emerald-200 text-emerald-700 font-bold rounded-xl shadow-sm hover:bg-emerald-50 transition"
+            >
+              <MessageSquare size={18} /> Messages
+            </Link>
+
+            <Link
+              to="/volunteer/opportunities"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md shadow-emerald-500/20 transition-all hover:-translate-y-0.5"
+            >
+              <Briefcase size={18} /> Find Opportunities
+            </Link>
+          </div>
         </motion.div>
 
         {loading ? (
@@ -195,7 +207,7 @@ export default function VolunteerDashboard() {
           </div>
         ) : (
           <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="space-y-8">
-            
+
             {/* Stats Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               <motion.div variants={fadeUp} className={`${glassCardClass} p-6 flex items-center gap-4`}>
@@ -256,12 +268,12 @@ export default function VolunteerDashboard() {
                     <div className="absolute top-4 right-4 flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-md text-[10px] font-bold border border-emerald-200 shadow-sm">
                       <Sparkles size={12} /> {opp.matchScore}% Match
                     </div>
-                    
+
                     <h3 className="font-bold text-slate-800 text-lg leading-tight mb-2 pr-20 line-clamp-2">{opp.title}</h3>
                     <p className="text-sm font-medium text-slate-500 line-clamp-2 mb-4 flex-1">
                       {opp.description || "Highly recommended based on your skills."}
                     </p>
-                    
+
                     <div className="flex flex-wrap gap-1.5 mb-5">
                       {opp.requiredSkills?.slice(0, 3).map((skill, idx) => (
                         <span key={idx} className="px-2 py-0.5 bg-white/60 border border-white/80 text-slate-600 rounded text-[9px] font-bold uppercase tracking-wider">
@@ -269,7 +281,7 @@ export default function VolunteerDashboard() {
                         </span>
                       ))}
                     </div>
-                    
+
                     <Link to="/volunteer/opportunities" className="w-full py-2.5 bg-white/60 border border-white/80 hover:border-emerald-500 hover:text-emerald-700 text-slate-700 text-sm font-bold rounded-xl text-center transition-all shadow-sm">
                       Review Opportunity
                     </Link>
@@ -286,14 +298,14 @@ export default function VolunteerDashboard() {
 
             {/* Impact Journal & Activity Feed */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              
+
               {/* Journal */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-display font-extrabold text-slate-800 flex items-center gap-2">
                     <BookHeart className="text-rose-500" size={20} /> Impact Journal
                   </h2>
-                  <button 
+                  <button
                     onClick={() => setIsMemoryModalOpen(true)}
                     className="text-xs font-bold bg-white/60 border border-white/80 text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors shadow-sm"
                   >
@@ -376,11 +388,11 @@ export default function VolunteerDashboard() {
       {/* Memory Modal */}
       <AnimatePresence>
         {isMemoryModalOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
               className="bg-[#F9F6F0] rounded-2xl shadow-2xl w-full max-w-md border border-white overflow-hidden"
             >
@@ -390,16 +402,16 @@ export default function VolunteerDashboard() {
                 </h3>
                 <button onClick={() => setIsMemoryModalOpen(false)} className="text-slate-400 hover:text-slate-700 transition-colors"><X size={20} /></button>
               </div>
-              
+
               <form onSubmit={handleSaveMemory} className="p-5 space-y-5">
                 <div>
                   <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Select Your Activity</label>
                   {applications.length > 0 ? (
-                    <select 
+                    <select
                       required
                       value={newMemory.opportunityId}
                       onChange={(e) => setNewMemory({
-                        ...newMemory, 
+                        ...newMemory,
                         opportunityId: e.target.value,
                         opportunityTitle: e.target.options[e.target.selectedIndex].text
                       })}
@@ -418,17 +430,17 @@ export default function VolunteerDashboard() {
                     </div>
                   )}
                 </div>
-                
+
                 {applications.length > 0 && (
                   <>
                     <div>
                       <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Experience Rating</label>
                       <div className="flex gap-2">
                         {[1, 2, 3, 4, 5].map(star => (
-                          <button 
-                            type="button" 
-                            key={star} 
-                            onClick={() => setNewMemory({...newMemory, rating: star})}
+                          <button
+                            type="button"
+                            key={star}
+                            onClick={() => setNewMemory({ ...newMemory, rating: star })}
                             className={`p-2 rounded-xl transition-all ${newMemory.rating >= star ? 'text-amber-500 bg-amber-50 shadow-sm border border-amber-100' : 'text-slate-300 hover:text-amber-300'}`}
                           >
                             <Star size={24} fill={newMemory.rating >= star ? 'currentColor' : 'none'} />
@@ -439,12 +451,12 @@ export default function VolunteerDashboard() {
 
                     <div>
                       <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Reflection / Feedback</label>
-                      <textarea 
+                      <textarea
                         required
-                        rows="4" 
+                        rows="4"
                         placeholder="What did you learn? How was the experience?"
                         value={newMemory.text}
-                        onChange={(e) => setNewMemory({...newMemory, text: e.target.value})}
+                        onChange={(e) => setNewMemory({ ...newMemory, text: e.target.value })}
                         className={`${inputClass} resize-none`}
                       ></textarea>
                     </div>
