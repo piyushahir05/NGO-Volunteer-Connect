@@ -172,7 +172,13 @@ npm run dev            # Starts the app at http://localhost:3000
 
 The Vite dev server automatically proxies `/api` and `/socket.io` requests to the backend.
 
-### 4. Production Build (Frontend)
+### 4.ML Service
+cd ml-service
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+# Interactive docs → http://localhost:8000/docs
+
+### 5. Production Build (Frontend)
 
 ```bash
 cd frontend
