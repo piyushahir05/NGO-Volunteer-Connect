@@ -40,12 +40,17 @@ app = FastAPI(
 # ---------------------------------------------------------------------------
 # CORS Configuration (Crucial for React Frontend Communication)
 # ---------------------------------------------------------------------------
+# main.py
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"], # Allows React/Vite development ports
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://ngo-volunteer-connect.vercel.app" # Add your production domain here
+    ],
     allow_credentials=True,
-    allow_methods=["*"], # Allows all methods including GET, POST, OPTIONS
-    allow_headers=["*"], # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # ---------------------------------------------------------------------------
