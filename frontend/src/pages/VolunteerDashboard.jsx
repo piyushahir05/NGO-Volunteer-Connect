@@ -86,7 +86,7 @@ export default function VolunteerDashboard() {
           };
 
           // Replace the hardcoded fetch with an environment variable
-          const mlBaseUrl = import.meta.env.VITE_ML_API_URL || 'http://localhost:8000';
+          const mlBaseUrl = import.meta.env.ML_API_URL || 'http://localhost:8000';
           const mlRes = await fetch(`${mlBaseUrl}/recommend/opportunities`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
