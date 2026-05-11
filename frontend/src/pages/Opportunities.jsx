@@ -47,9 +47,9 @@ export default function Opportunities() {
     setApplying(id);
     try {
       await api.post(`/opportunities/${id}/apply`);
-      setOpportunities(opportunities.map(opp => 
-        opp._id === id 
-          ? { ...opp, hasApplied: true, applicants: [...(opp.applicants || []), { volunteerId: user._id }] } 
+      setOpportunities(opportunities.map(opp =>
+        opp._id === id
+          ? { ...opp, hasApplied: true, applicants: [...(opp.applicants || []), { volunteerId: user._id }] }
           : opp
       ));
     } catch (err) {
@@ -59,20 +59,20 @@ export default function Opportunities() {
     }
   };
 
-  const filteredOpportunities = opportunities.filter(opp => 
+  const filteredOpportunities = opportunities.filter(opp =>
     opp.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     opp.requiredSkills?.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
     <div className="relative min-h-screen bg-[#F9F6F0] overflow-hidden py-6 px-4 sm:px-6 lg:px-8 font-sans selection:bg-emerald-200 selection:text-emerald-900">
-      
+
       {/* Ambient Background Blobs */}
       <div className="fixed top-[0%] left-[-10%] w-[35vw] h-[35vw] rounded-full bg-emerald-300/20 blur-[100px] pointer-events-none mix-blend-multiply animate-[pulse_8s_ease-in-out_infinite]" />
       <div className="fixed bottom-[-10%] right-[-5%] w-[45vw] h-[45vw] rounded-full bg-teal-200/25 blur-[120px] pointer-events-none mix-blend-multiply animate-[pulse_10s_ease-in-out_infinite_reverse]" />
-      
+
       <div className="relative z-10 max-w-6xl mx-auto space-y-8">
-        
+
         {/* Header & Search */}
         <motion.div initial="hidden" animate="visible" variants={fadeUp} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -82,7 +82,7 @@ export default function Opportunities() {
             </h1>
             <p className="text-sm font-bold text-slate-500 mt-1">Find causes that match your skills and passion.</p>
           </div>
-          
+
           <div className="relative w-full md:w-96">
             <Search size={18} className="absolute left-4 top-3.5 text-slate-400" />
             <input
@@ -98,8 +98,8 @@ export default function Opportunities() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-32 h-[50vh]">
             <div className="relative w-12 h-12 flex items-center justify-center">
-               <div className="absolute inset-0 rounded-full border-4 border-emerald-100"></div>
-               <div className="absolute inset-0 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin"></div>
+              <div className="absolute inset-0 rounded-full border-4 border-emerald-100"></div>
+              <div className="absolute inset-0 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin"></div>
             </div>
             <span className="mt-4 text-xs font-bold tracking-widest text-emerald-600 uppercase">Loading Opportunities...</span>
           </div>
@@ -117,9 +117,17 @@ export default function Opportunities() {
                   <motion.div key={opp._id} variants={fadeUp} layout className={`${glassCardClass} flex flex-col p-6`}>
                     <div className="flex-1 space-y-4">
                       <div className="flex justify-between items-start gap-4">
-                        <h2 className="text-lg font-bold text-slate-800 leading-tight">{opp.title}</h2>
+                        <div>
+                          <h2 className="text-xl font-extrabold text-emerald-700 leading-tight">
+                            {opp.ngoName || 'NGO'}
+                          </h2>
+
+                          <p className="text-base font-semibold text-slate-700 mt-1">
+                            {opp.title}
+                          </p>
+                        </div>
                       </div>
-                      
+
                       <p className="text-sm font-medium text-slate-600 line-clamp-3">
                         {opp.description || "No description provided."}
                       </p>
@@ -154,11 +162,10 @@ export default function Opportunities() {
                       <button
                         onClick={() => handleApply(opp._id)}
                         disabled={hasApplied || applying === opp._id}
-                        className={`w-full py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-sm ${
-                          hasApplied
+                        className={`w-full py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-sm ${hasApplied
                             ? 'bg-emerald-100 text-emerald-700 cursor-not-allowed border border-emerald-200'
                             : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-500/20 hover:shadow-md'
-                        }`}
+                          }`}
                       >
                         {applying === opp._id ? (
                           <Loader2 size={18} className="animate-spin" />
