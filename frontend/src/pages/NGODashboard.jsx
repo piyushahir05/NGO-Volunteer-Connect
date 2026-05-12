@@ -6,10 +6,10 @@ import {
   Building2, CalendarDays, Users, ArrowRight, Plus,
   ClipboardList, MessageSquare, BarChart3, ChevronRight,
   Loader2, Sparkles, TrendingUp, Brain, MapPin, Clock,
-  ChevronDown, Star, Zap, X,
+  ChevronDown, Star, Zap, X, Send, CheckCircle2,
 } from 'lucide-react';
 
-// ─── Animation variants (unchanged) ─────────────────────────────────────────
+// ─── Animation variants ───────────────────────────────────────────────────────
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },
@@ -23,7 +23,7 @@ const fadeIn = {
   visible: { opacity: 1, scale: 1, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
 };
 
-// ─── Constants (unchanged) ───────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 const BAR_COLORS = [
   'bg-primary-500', 'bg-emerald-500', 'bg-teal-500',
   'bg-primary-400', 'bg-emerald-400', 'bg-teal-400',
@@ -57,14 +57,14 @@ const KPI_ACCENTS = {
   },
 };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function scoreInfo(score) {
   if (score >= 0.70) return { label: 'Strong',  ring: 'ring-emerald-400', bar: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50'  };
   if (score >= 0.40) return { label: 'Partial', ring: 'ring-amber-400',   bar: 'bg-amber-400',   text: 'text-amber-700',  bg: 'bg-amber-50'   };
   return               { label: 'Low',     ring: 'ring-red-300',    bar: 'bg-red-400',     text: 'text-red-700',    bg: 'bg-red-50'     };
 }
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
+// ─── Sub-components ───────────────────────────────────────────────────────────
 function FloatingOrbs() {
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -85,7 +85,74 @@ function SkillChip({ children, highlight }) {
   );
 }
 
-// ─── ML Recommendations Panel ────────────────────────────────────────────────
+// ─── Invite Button ────────────────────────────────────────────────────────────
+// Manages its own per-volunteer invite state so the rest of the card is unaffected
+function InviteButton({ vol, selectedEvent }) {
+  // 'idle' | 'loading' | 'sent' | 'duplicate' | 'error'
+  const [status, setStatus] = useState('idle');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  async function handleInvite() {
+    if (!selectedEvent) return;
+    setStatus('loading');
+    setErrorMsg('');
+    try {
+      await api.post('/notifications/invite', {
+        volunteerId: vol.userId,   // the volunteer's User _id (returned by the ML endpoint)
+        opportunityId: selectedEvent._id,
+        opportunityTitle: selectedEvent.title,
+      });
+      setStatus('sent');
+    } catch (err) {
+      if (err.message?.toLowerCase().includes('already')) {
+        setStatus('duplicate');
+      } else {
+        setStatus('error');
+        setErrorMsg(err.message || 'Failed to send invite');
+      }
+    }
+  }
+
+  if (status === 'sent') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-[0.72rem] font-bold">
+        <CheckCircle2 size={13} /> Invited
+      </span>
+    );
+  }
+
+  if (status === 'duplicate') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 text-[0.72rem] font-bold">
+        <CheckCircle2 size={13} /> Already invited
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <button
+        onClick={handleInvite}
+        disabled={status === 'loading' || !selectedEvent}
+        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[0.72rem] font-bold transition-all
+          ${status === 'loading' || !selectedEvent
+            ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+            : 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-sm shadow-indigo-200 hover:-translate-y-0.5 hover:shadow-md hover:shadow-indigo-300'
+          }`}
+      >
+        {status === 'loading'
+          ? <><Loader2 size={12} className="animate-spin" /> Sending…</>
+          : <><Send size={12} /> Invite</>
+        }
+      </button>
+      {status === 'error' && (
+        <span className="text-[0.65rem] text-red-500 font-medium">{errorMsg}</span>
+      )}
+    </div>
+  );
+}
+
+// ─── ML Recommendations Panel ─────────────────────────────────────────────────
 function MLRecommendationsPanel({ events }) {
   const [selectedEventId, setSelectedEventId] = useState('');
   const [volunteers, setVolunteers]           = useState([]);
@@ -258,7 +325,7 @@ function MLRecommendationsPanel({ events }) {
           </div>
         )}
 
-        {/* Volunteer cards */}
+        {/* ── Volunteer cards ── */}
         {!loading && volunteers.length > 0 && (
           <motion.div
             initial="hidden"
@@ -277,7 +344,6 @@ function MLRecommendationsPanel({ events }) {
             {volunteers.map((vol, i) => {
               const si = scoreInfo(vol.matchScore);
               const pct = Math.round(vol.matchScore * 100);
-              // Highlight volunteer skills that overlap with event required skills
               const reqSet = new Set((selectedEvent?.requiredSkills || []).map((s) => s.toLowerCase()));
 
               return (
@@ -287,7 +353,7 @@ function MLRecommendationsPanel({ events }) {
                   className={`relative rounded-2xl border p-4 hover:shadow-md transition-all duration-200 overflow-hidden
                     ${i === 0 ? 'border-emerald-200 bg-emerald-50/30' : 'border-[#E8E3D9] bg-white'}`}
                 >
-                  {/* Top-ranked glow */}
+                  {/* Top-ranked badge */}
                   {i === 0 && (
                     <div className="absolute top-2 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[0.65rem] font-bold">
                       <Star size={10} fill="currentColor" /> Best Match
@@ -351,6 +417,11 @@ function MLRecommendationsPanel({ events }) {
                         </p>
                       )}
                     </div>
+
+                    {/* ── INVITE BUTTON (new) ── */}
+                    <div className="flex-shrink-0 self-center">
+                      <InviteButton vol={vol} selectedEvent={selectedEvent} />
+                    </div>
                   </div>
                 </motion.div>
               );
@@ -362,7 +433,7 @@ function MLRecommendationsPanel({ events }) {
   );
 }
 
-// ─── Main Dashboard ───────────────────────────────────────────────────────────
+// ─── Main Dashboard ────────────────────────────────────────────────────────────
 export default function NGODashboard() {
   const [stats, setStats]   = useState(null);
   const [loading, setLoading] = useState(true);
@@ -411,7 +482,7 @@ export default function NGODashboard() {
 
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-24 space-y-10">
 
-        {/* ── Page Title + Action Buttons ─────────────────────────────────── */}
+        {/* ── Page Title + Action Buttons ── */}
         <motion.div
           initial="hidden"
           animate="visible"
@@ -447,7 +518,7 @@ export default function NGODashboard() {
           </motion.div>
         </motion.div>
 
-        {/* ── Loading ─────────────────────────────────────────────────────── */}
+        {/* ── Loading ── */}
         {loading && (
           <div className="flex items-center justify-center py-24">
             <Loader2 size={28} className="animate-spin text-primary-400" />
@@ -455,7 +526,7 @@ export default function NGODashboard() {
           </div>
         )}
 
-        {/* ── Error ───────────────────────────────────────────────────────── */}
+        {/* ── Error ── */}
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -468,7 +539,7 @@ export default function NGODashboard() {
 
         {stats && (
           <>
-            {/* ── KPI Cards ─────────────────────────────────────────────── */}
+            {/* ── KPI Cards ── */}
             <motion.div
               initial="hidden"
               animate="visible"
@@ -502,7 +573,7 @@ export default function NGODashboard() {
               })}
             </motion.div>
 
-            {/* ── Charts Row ────────────────────────────────────────────── */}
+            {/* ── Charts Row ── */}
             {events.length > 0 && (
               <motion.div
                 initial="hidden"
@@ -589,7 +660,7 @@ export default function NGODashboard() {
               </motion.div>
             )}
 
-            {/* ── ML Recommendations Panel ───────────────────────────────── */}
+            {/* ── ML Recommendations Panel (now with Invite buttons) ── */}
             <MLRecommendationsPanel events={events} />
 
             {/* Empty state */}
@@ -616,7 +687,7 @@ export default function NGODashboard() {
           </>
         )}
 
-        {/* ── Quick Actions ──────────────────────────────────────────────── */}
+        {/* ── Quick Actions ── */}
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -650,7 +721,7 @@ export default function NGODashboard() {
           </div>
         </motion.div>
 
-        {/* ── Footer Nav Cards ───────────────────────────────────────────── */}
+        {/* ── Footer Nav Cards ── */}
         <motion.div
           initial="hidden"
           whileInView="visible"
