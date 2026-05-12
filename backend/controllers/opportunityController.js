@@ -183,7 +183,7 @@ exports.getRecommendedVolunteers = async (req, res, next) => {
     }));
  
     // ── 3. Call the ML microservice ───────────────────────────────────────────
-    const ML_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
+   const ML_URL = process.env.ML_API_URL || 'http://localhost:8000';
  
     const mlResponse = await fetch(`${ML_URL}/recommend/volunteers`, {
       method: 'POST',
