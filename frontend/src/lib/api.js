@@ -21,4 +21,7 @@ export const api = {
   post: (path, data) => request('POST', path, data),
   put: (path, data) => request('PUT', path, data),
   delete: (path) => request('DELETE', path),
+  getRecommendedVolunteers: (opportunityId) =>
+      request('GET', `/opportunities/${opportunityId}/recommended-volunteers`),
 };
+

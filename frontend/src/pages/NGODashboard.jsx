@@ -1,28 +1,29 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, useScroll, useSpring } from 'framer-motion';
+import { motion, useScroll, useSpring, AnimatePresence } from 'framer-motion';
 import { api } from '../lib/api';
 import {
   Building2, CalendarDays, Users, ArrowRight, Plus,
   ClipboardList, MessageSquare, BarChart3, ChevronRight,
-  Loader2, Sparkles, TrendingUp,
+  Loader2, Sparkles, TrendingUp, Brain, MapPin, Clock,
+  ChevronDown, Star, Zap, X,
 } from 'lucide-react';
 
+// ─── Animation variants (unchanged) ─────────────────────────────────────────
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },
 };
-
 const staggerContainer = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
 };
-
 const fadeIn = {
   hidden: { opacity: 0, scale: 0.97 },
   visible: { opacity: 1, scale: 1, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
 };
 
+// ─── Constants (unchanged) ───────────────────────────────────────────────────
 const BAR_COLORS = [
   'bg-primary-500', 'bg-emerald-500', 'bg-teal-500',
   'bg-primary-400', 'bg-emerald-400', 'bg-teal-400',
@@ -30,32 +31,40 @@ const BAR_COLORS = [
 ];
 
 const QUICK_ACTIONS = [
-  { label: 'Create Event', icon: Plus, to: '/ngo/events', desc: 'Launch a new volunteering opportunity' },
-  { label: 'Review Applications', icon: ClipboardList, to: '/ngo/events', desc: 'Screen and approve pending requests' },
-  { label: 'Message Volunteers', icon: MessageSquare, to: '/ngo/messages', desc: 'Coordinate with your active team' },
+  { label: 'Create Event',          icon: Plus,          to: '/ngo/events',   desc: 'Launch a new volunteering opportunity' },
+  { label: 'Review Applications',   icon: ClipboardList, to: '/ngo/events',   desc: 'Screen and approve pending requests' },
+  { label: 'Message Volunteers',    icon: MessageSquare, to: '/ngo/messages', desc: 'Coordinate with your active team' },
 ];
 
 const KPI_ACCENTS = {
   emerald: {
     wrap: 'bg-emerald-50 border-emerald-100',
     icon: 'bg-emerald-100 text-emerald-600',
-    val: 'text-emerald-700',
-    lbl: 'text-emerald-600',
+    val:  'text-emerald-700',
+    lbl:  'text-emerald-600',
   },
   blue: {
     wrap: 'bg-teal-50 border-teal-100',
     icon: 'bg-teal-100 text-teal-600',
-    val: 'text-teal-700',
-    lbl: 'text-teal-600',
+    val:  'text-teal-700',
+    lbl:  'text-teal-600',
   },
   amber: {
     wrap: 'bg-primary-50 border-primary-100',
     icon: 'bg-primary-100 text-primary-600',
-    val: 'text-primary-700',
-    lbl: 'text-primary-600',
+    val:  'text-primary-700',
+    lbl:  'text-primary-600',
   },
 };
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function scoreInfo(score) {
+  if (score >= 0.70) return { label: 'Strong',  ring: 'ring-emerald-400', bar: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50'  };
+  if (score >= 0.40) return { label: 'Partial', ring: 'ring-amber-400',   bar: 'bg-amber-400',   text: 'text-amber-700',  bg: 'bg-amber-50'   };
+  return               { label: 'Low',     ring: 'ring-red-300',    bar: 'bg-red-400',     text: 'text-red-700',    bg: 'bg-red-50'     };
+}
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
 function FloatingOrbs() {
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -65,10 +74,299 @@ function FloatingOrbs() {
   );
 }
 
+function SkillChip({ children, highlight }) {
+  return (
+    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[0.68rem] font-semibold mr-1 mb-1
+      ${highlight
+        ? 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300'
+        : 'bg-slate-100 text-slate-500'}`}>
+      {children}
+    </span>
+  );
+}
+
+// ─── ML Recommendations Panel ────────────────────────────────────────────────
+function MLRecommendationsPanel({ events }) {
+  const [selectedEventId, setSelectedEventId] = useState('');
+  const [volunteers, setVolunteers]           = useState([]);
+  const [loading, setLoading]                 = useState(false);
+  const [error, setError]                     = useState('');
+  const [fetched, setFetched]                 = useState(false);
+  const [dropdownOpen, setDropdownOpen]       = useState(false);
+
+  const selectedEvent = useMemo(
+    () => events.find((e) => e._id === selectedEventId),
+    [events, selectedEventId]
+  );
+
+  async function fetchRecommendations() {
+    if (!selectedEventId) return;
+    setLoading(true);
+    setError('');
+    setVolunteers([]);
+    try {
+      const { data } = await api.get(`/opportunities/${selectedEventId}/recommended-volunteers`);
+      setVolunteers(data);
+      setFetched(true);
+    } catch (err) {
+      setError(err.message || 'Failed to fetch recommendations.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <motion.div
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: '-60px' }}
+      variants={fadeUp}
+      className="bg-white rounded-[2rem] border border-[#E8E3D9] shadow-sm overflow-hidden"
+    >
+      {/* ── Panel header ── */}
+      <div className="px-7 pt-7 pb-5 border-b border-[#F0EBE3]">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-md shadow-indigo-200 flex-shrink-0">
+              <Brain size={18} className="text-white" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                ML Volunteer Finder
+                <span className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-[0.65rem] font-bold tracking-wide uppercase">
+                  AI-Powered
+                </span>
+              </h2>
+              <p className="text-xs text-slate-400 font-medium mt-0.5">
+                TF-IDF cosine similarity · ranked by skill match
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Event selector + trigger ── */}
+        <div className="mt-5 flex flex-col sm:flex-row gap-3">
+          {/* Custom dropdown */}
+          <div className="relative flex-1">
+            <button
+              onClick={() => setDropdownOpen((v) => !v)}
+              className="w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl border border-[#E8E3D9] bg-[#F9F6F0] text-sm font-medium text-slate-700 hover:border-violet-300 hover:bg-violet-50/40 transition-all"
+            >
+              <span className={selectedEvent ? 'text-slate-800' : 'text-slate-400'}>
+                {selectedEvent ? selectedEvent.title : 'Select an event…'}
+              </span>
+              <ChevronDown size={15} className={`text-slate-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            <AnimatePresence>
+              {dropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-[#E8E3D9] rounded-2xl shadow-xl shadow-slate-200/60 z-30 overflow-hidden"
+                >
+                  {events.length === 0 ? (
+                    <p className="px-4 py-3 text-xs text-slate-400">No events found.</p>
+                  ) : (
+                    events.map((ev) => (
+                      <button
+                        key={ev._id}
+                        onClick={() => { setSelectedEventId(ev._id); setDropdownOpen(false); setFetched(false); setVolunteers([]); }}
+                        className={`w-full text-left px-4 py-3 text-sm font-medium hover:bg-violet-50 transition-colors border-b border-[#F0EBE3] last:border-0
+                          ${selectedEventId === ev._id ? 'text-violet-700 bg-violet-50/60' : 'text-slate-700'}`}
+                      >
+                        <span className="block truncate">{ev.title}</span>
+                        {ev.requiredSkills?.length > 0 && (
+                          <span className="text-[0.68rem] text-slate-400 font-normal">
+                            {ev.requiredSkills.slice(0, 3).join(' · ')}
+                            {ev.requiredSkills.length > 3 && ` +${ev.requiredSkills.length - 3}`}
+                          </span>
+                        )}
+                      </button>
+                    ))
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <button
+            onClick={fetchRecommendations}
+            disabled={!selectedEventId || loading}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all
+              ${!selectedEventId || loading
+                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                : 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-indigo-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-300'}`}
+          >
+            {loading
+              ? <><Loader2 size={15} className="animate-spin" /> Analyzing…</>
+              : <><Zap size={15} /> {fetched ? 'Re-run' : 'Find Volunteers'}</>}
+          </button>
+        </div>
+
+        {/* Required skills preview */}
+        {selectedEvent?.requiredSkills?.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-1">
+            <span className="text-[0.7rem] text-slate-400 font-semibold mr-1">Matching:</span>
+            {selectedEvent.requiredSkills.map((s) => (
+              <span key={s} className="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[0.68rem] font-semibold ring-1 ring-indigo-200">
+                {s}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Results body ── */}
+      <div className="px-7 py-5">
+
+        {/* Error */}
+        {error && (
+          <div className="flex items-center gap-3 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium mb-4">
+            <X size={16} className="flex-shrink-0" />
+            {error}
+          </div>
+        )}
+
+        {/* Loading skeleton */}
+        {loading && (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-20 rounded-2xl bg-slate-100 animate-pulse" />
+            ))}
+          </div>
+        )}
+
+        {/* Empty state — pre-fetch */}
+        {!loading && !fetched && !error && (
+          <div className="py-10 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto mb-3">
+              <Brain size={24} className="text-indigo-400" />
+            </div>
+            <p className="text-sm font-semibold text-slate-500">Select an event and run the ML engine</p>
+            <p className="text-xs text-slate-400 mt-1">to see your best-matched volunteers.</p>
+          </div>
+        )}
+
+        {/* Empty state — post-fetch, no results */}
+        {!loading && fetched && volunteers.length === 0 && !error && (
+          <div className="py-10 text-center">
+            <p className="text-sm font-semibold text-slate-500">No volunteers with matching skills found.</p>
+            <p className="text-xs text-slate-400 mt-1">Try an event with different required skills.</p>
+          </div>
+        )}
+
+        {/* Volunteer cards */}
+        {!loading && volunteers.length > 0 && (
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+            className="space-y-3"
+          >
+            {/* Results summary */}
+            <motion.div variants={fadeUp} className="flex items-center gap-2 mb-1">
+              <Star size={13} className="text-violet-500" />
+              <span className="text-xs font-bold text-slate-500">
+                {volunteers.length} volunteer{volunteers.length !== 1 ? 's' : ''} ranked by match score
+              </span>
+            </motion.div>
+
+            {volunteers.map((vol, i) => {
+              const si = scoreInfo(vol.matchScore);
+              const pct = Math.round(vol.matchScore * 100);
+              // Highlight volunteer skills that overlap with event required skills
+              const reqSet = new Set((selectedEvent?.requiredSkills || []).map((s) => s.toLowerCase()));
+
+              return (
+                <motion.div
+                  key={vol.profileId}
+                  variants={fadeIn}
+                  className={`relative rounded-2xl border p-4 hover:shadow-md transition-all duration-200 overflow-hidden
+                    ${i === 0 ? 'border-emerald-200 bg-emerald-50/30' : 'border-[#E8E3D9] bg-white'}`}
+                >
+                  {/* Top-ranked glow */}
+                  {i === 0 && (
+                    <div className="absolute top-2 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[0.65rem] font-bold">
+                      <Star size={10} fill="currentColor" /> Best Match
+                    </div>
+                  )}
+
+                  <div className="flex items-start gap-4">
+                    {/* Rank avatar */}
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-sm font-bold ring-2 ${si.ring}
+                      ${i === 0 ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                      {i + 1}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      {/* Name + score badge */}
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <span className="text-sm font-bold text-slate-900">{vol.name}</span>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold ${si.bg} ${si.text}`}>
+                          {pct}% · {si.label}
+                        </span>
+                      </div>
+
+                      {/* Email / location / availability */}
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[0.72rem] text-slate-400 font-medium mb-2">
+                        <span>{vol.email}</span>
+                        {vol.location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin size={10} /> {vol.location}
+                          </span>
+                        )}
+                        {vol.availability && (
+                          <span className="flex items-center gap-1">
+                            <Clock size={10} /> {vol.availability}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Score bar */}
+                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2.5">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${pct}%` }}
+                          transition={{ duration: 0.7, delay: i * 0.05, ease: [0.22, 1, 0.36, 1] }}
+                          className={`h-full rounded-full ${si.bar}`}
+                        />
+                      </div>
+
+                      {/* Skills with overlap highlighting */}
+                      <div className="flex flex-wrap">
+                        {vol.skills.map((s) => (
+                          <SkillChip key={s} highlight={reqSet.has(s.toLowerCase())}>
+                            {s}
+                          </SkillChip>
+                        ))}
+                      </div>
+
+                      {/* Bio */}
+                      {vol.bio && (
+                        <p className="mt-2 text-[0.75rem] text-slate-500 leading-relaxed line-clamp-2">
+                          {vol.bio}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function NGODashboard() {
-  const [stats, setStats] = useState(null);
+  const [stats, setStats]   = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError]   = useState(null);
 
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
@@ -91,13 +389,13 @@ export default function NGODashboard() {
 
   const kpiCards = useMemo(() => stats
     ? [
-      { label: 'Active Events', value: String(stats.activeEvents), icon: CalendarDays, accent: 'emerald' },
-      { label: 'Total Volunteers', value: String(stats.totalVolunteers), icon: Users, accent: 'blue' },
-      { label: 'Pending Applications', value: String(stats.pendingApplications), icon: ClipboardList, accent: 'amber' },
-    ]
+        { label: 'Active Events',        value: String(stats.activeEvents),        icon: CalendarDays, accent: 'emerald' },
+        { label: 'Total Volunteers',      value: String(stats.totalVolunteers),     icon: Users,        accent: 'blue'    },
+        { label: 'Pending Applications',  value: String(stats.pendingApplications), icon: ClipboardList, accent: 'amber' },
+      ]
     : [], [stats]);
 
-  const events = stats?.events || [];
+  const events       = stats?.events || [];
   const maxApplicants = useMemo(() => Math.max(1, ...events.map((e) => e.totalApplicants)), [events]);
 
   return (
@@ -113,7 +411,7 @@ export default function NGODashboard() {
 
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-24 space-y-10">
 
-        {/* ── Page Title + Action Buttons ── */}
+        {/* ── Page Title + Action Buttons ─────────────────────────────────── */}
         <motion.div
           initial="hidden"
           animate="visible"
@@ -133,7 +431,6 @@ export default function NGODashboard() {
             </p>
           </motion.div>
 
-          {/* ✅ Action Buttons — match volunteer side */}
           <motion.div variants={fadeUp} className="flex items-center gap-3 flex-shrink-0">
             <Link
               to="/ngo/messages"
@@ -150,7 +447,7 @@ export default function NGODashboard() {
           </motion.div>
         </motion.div>
 
-        {/* ── Loading ── */}
+        {/* ── Loading ─────────────────────────────────────────────────────── */}
         {loading && (
           <div className="flex items-center justify-center py-24">
             <Loader2 size={28} className="animate-spin text-primary-400" />
@@ -158,7 +455,7 @@ export default function NGODashboard() {
           </div>
         )}
 
-        {/* ── Error ── */}
+        {/* ── Error ───────────────────────────────────────────────────────── */}
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -171,7 +468,7 @@ export default function NGODashboard() {
 
         {stats && (
           <>
-            {/* ── KPI Cards ── */}
+            {/* ── KPI Cards ─────────────────────────────────────────────── */}
             <motion.div
               initial="hidden"
               animate="visible"
@@ -205,7 +502,7 @@ export default function NGODashboard() {
               })}
             </motion.div>
 
-            {/* ── Charts Row ── */}
+            {/* ── Charts Row ────────────────────────────────────────────── */}
             {events.length > 0 && (
               <motion.div
                 initial="hidden"
@@ -292,6 +589,9 @@ export default function NGODashboard() {
               </motion.div>
             )}
 
+            {/* ── ML Recommendations Panel ───────────────────────────────── */}
+            <MLRecommendationsPanel events={events} />
+
             {/* Empty state */}
             {events.length === 0 && (
               <motion.div
@@ -316,7 +616,7 @@ export default function NGODashboard() {
           </>
         )}
 
-        {/* ── Quick Actions ── */}
+        {/* ── Quick Actions ──────────────────────────────────────────────── */}
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -350,7 +650,7 @@ export default function NGODashboard() {
           </div>
         </motion.div>
 
-        {/* ── Footer Nav Cards ── */}
+        {/* ── Footer Nav Cards ───────────────────────────────────────────── */}
         <motion.div
           initial="hidden"
           whileInView="visible"

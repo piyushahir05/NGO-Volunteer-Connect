@@ -8,16 +8,17 @@ const {
   apply,
   updateApplicationStatus,
   getApplicants,
+  getRecommendedVolunteers,          // ← ADDED
 } = require('../controllers/opportunityController');
 const { protect, role } = require('../middleware/auth');
-
+ 
 const router = express.Router();
-
+ 
 router.get('/', list);
 router.get('/:id', getOne);
-
+ 
 router.post('/:id/apply', protect, role('Volunteer'), apply);
-
+ 
 router.post(
   '/',
   protect,
@@ -31,7 +32,7 @@ router.post(
   ],
   create
 );
-
+ 
 router.put(
   '/:id',
   protect,
@@ -45,8 +46,10 @@ router.put(
   ],
   update
 );
-
-router.get('/:id/applicants', protect, role('NGO'), getApplicants);
+ 
+router.get('/:id/applicants',             protect, role('NGO'), getApplicants);
+router.get('/:id/recommended-volunteers', protect, role('NGO'), getRecommendedVolunteers); // ← ADDED
+ 
 router.put(
   '/:oppId/applicants/:applicantId/status',
   protect,
@@ -54,5 +57,5 @@ router.put(
   [body('status').isIn(['Accepted', 'Rejected'])],
   updateApplicationStatus
 );
-
+ 
 module.exports = router;
