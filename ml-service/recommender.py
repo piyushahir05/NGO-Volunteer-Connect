@@ -1,148 +1,139 @@
 """
 recommender.py
 
-Reusable ML functions for the NGO Volunteer Connect recommendation system.
+Hybrid recommendation engine for NGO Volunteer Connect.
 
-Scoring pipeline (hybrid approach):
-  1. TF-IDF cosine similarity  – captures semantic term overlap
-  2. Fuzzy skill matching       – handles typos / casing differences
-     (e.g. "Web Devlopment" still matches "Web Development")
-  3. Jaccard overlap            – rewards direct skill set intersection
-  4. Weighted combination       – blends all three for a robust final score
+Core fix: required skills are sometimes stored as multi-word phrases like
+"Web Development React UI Design" (one string) while volunteer skills are
+stored as separate entries ["Web Development", "React", "UI design"].
 
-Why hybrid?
-  Pure TF-IDF struggles with:
-    - Small corpora (< 20 docs) where IDF weights are unreliable
-    - Typos / inconsistent casing between skill strings
-    - Single-skill opportunities that produce artificially low scores
-  Fuzzy + Jaccard compensate for these weaknesses while TF-IDF still
-  captures multi-word semantic relationships.
+Solution: tokenize every skill string into individual words before matching,
+then compute overlap at the word level. This correctly handles both storage
+formats.
+
+Scoring pipeline:
+  1. Word-token overlap  – tokenizes all skill strings into words and computes
+                           what fraction of required-skill words the volunteer covers
+  2. Fuzzy skill match   – for each volunteer skill, finds the best fuzzy match
+                           against required skills (handles typos); only counts
+                           matches above a 0.75 similarity threshold to avoid
+                           false positives (e.g. "Devlopment" → "Development" ✓,
+                           unrelated short words ✗)
+  3. TF-IDF cosine       – word-level semantic signal
+  4. Weighted blend      – combines all three
 """
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from difflib import SequenceMatcher
+import re
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
+def _normalize(s: str) -> str:
+    return s.strip().lower()
+
+
+def _words(skill_or_skills) -> set:
+    """
+    Extract all individual words from a skill string or list of skill strings.
+
+    "Web Development React UI Design"  → {"web", "development", "react", "ui", "design"}
+    ["Web Development", "React"]       → {"web", "development", "react"}
+
+    This is the KEY fix: it doesn't matter whether skills are stored as one
+    long phrase or multiple short strings — we always compare at word level.
+    """
+    if isinstance(skill_or_skills, list):
+        text = " ".join(skill_or_skills)
+    else:
+        text = skill_or_skills
+    return set(re.findall(r'[a-z0-9]+', _normalize(text)))
+
+
 def _skills_to_text(skills: list[str]) -> str:
-    """Join skill tokens into a single whitespace-separated string."""
-    return " ".join(s.strip().lower() for s in skills if s.strip())
-
-
-def _normalize(skill: str) -> str:
-    """Lowercase and strip a skill string for comparison."""
-    return skill.strip().lower()
+    return " ".join(_normalize(s) for s in skills if s.strip())
 
 
 def _fuzzy_ratio(a: str, b: str) -> float:
-    """Return similarity ratio between two strings (0.0 – 1.0)."""
     return SequenceMatcher(None, a, b).ratio()
 
 
-def _best_fuzzy_match(skill: str, candidates: list[str], threshold: float = 0.75) -> float:
+def _word_overlap_score(required_skills: list[str], volunteer_skills: list[str]) -> float:
     """
-    Return the best fuzzy match score for `skill` against a list of candidates.
-    Returns 0.0 if no candidate exceeds the threshold.
-    A threshold of 0.75 catches typos like "Devlopment" → "Development"
-    while avoiding false positives.
+    Compute what fraction of required-skill WORDS the volunteer covers.
+
+    Example:
+      required  = ["Web Development React UI Design"]  → words: {web, development, react, ui, design}
+      volunteer = ["Web Development", "React", "UI design"] → words: {web, development, react, ui, design}
+      overlap   = 5/5 = 1.0  ✓
+
+      required  = ["Web Development React UI Design"]  → words: {web, development, react, ui, design}
+      volunteer = ["Web Development", "Teaching"]      → words: {web, development, teaching}
+      overlap   = 2/5 = 0.4
     """
-    norm = _normalize(skill)
-    best = 0.0
-    for c in candidates:
-        r = _fuzzy_ratio(norm, _normalize(c))
-        if r > best:
-            best = r
-    return best if best >= threshold else 0.0
+    required_words  = _words(required_skills)
+    volunteer_words = _words(volunteer_skills)
 
-
-def _jaccard_score(set_a: list[str], set_b: list[str], fuzzy: bool = True) -> float:
-    """
-    Compute a fuzzy-Jaccard similarity between two skill lists.
-
-    Standard Jaccard = |A ∩ B| / |A ∪ B|
-
-    Fuzzy variant: a skill in A "matches" a skill in B if the best fuzzy
-    ratio ≥ 0.75, so typos and casing differences still count as matches.
-    """
-    if not set_a or not set_b:
+    if not required_words:
         return 0.0
 
-    norm_b = [_normalize(s) for s in set_b]
-    matched = 0
-
-    for skill in set_a:
-        if _best_fuzzy_match(skill, set_b, threshold=0.75) > 0:
-            matched += 1
-
-    union = len(set(
-        [_normalize(s) for s in set_a] + norm_b
-    ))
-    return matched / union if union > 0 else 0.0
+    matched = len(required_words & volunteer_words)
+    return matched / len(required_words)
 
 
-def _overlap_score(query_skills: list[str], candidate_skills: list[str]) -> float:
+def _fuzzy_skill_score(
+    required_skills: list[str],
+    volunteer_skills: list[str],
+    threshold: float = 0.75,
+) -> float:
     """
-    Overlap coefficient = |A ∩ B| / min(|A|, |B|)
+    For each required skill string, find the best fuzzy match among volunteer
+    skill strings. Returns the average best-match score across all required
+    skills, counting only matches that exceed `threshold`.
 
-    Better than Jaccard when one set is much smaller than the other
-    (e.g. opportunity has 1 required skill, volunteer has 10).
-    Uses fuzzy matching for each pair.
+    A threshold of 0.75 catches genuine typos like "Devlopment" → "Development"
+    while avoiding spurious matches between unrelated short words.
     """
-    if not query_skills or not candidate_skills:
+    if not required_skills or not volunteer_skills:
         return 0.0
 
-    matched = sum(
-        1 for s in query_skills
-        if _best_fuzzy_match(s, candidate_skills, threshold=0.75) > 0
-    )
-    return matched / min(len(query_skills), len(candidate_skills))
+    total = 0.0
+    for req in required_skills:
+        best = max(
+            _fuzzy_ratio(_normalize(req), _normalize(vol))
+            for vol in volunteer_skills
+        )
+        # Only credit matches that clear the similarity threshold
+        total += best if best >= threshold else 0.0
+
+    return total / len(required_skills)
 
 
-def _tfidf_scores(query_text: str, doc_texts: list[str]) -> list[float]:
-    """
-    Compute TF-IDF cosine similarity between query_text and each doc in doc_texts.
-    Falls back to zeros if vectorization fails (e.g. empty vocabulary).
-    """
+def _tfidf_score(query_text: str, doc_texts: list[str]) -> list[float]:
+    """Word-level TF-IDF cosine similarity."""
     corpus = [query_text] + doc_texts
-    # Filter out completely empty documents to avoid vectorizer errors
     if not any(t.strip() for t in corpus):
         return [0.0] * len(doc_texts)
     try:
-        vectorizer = TfidfVectorizer(
-            analyzer='char_wb',   # character n-grams → robust to typos
-            ngram_range=(3, 4),   # trigrams + 4-grams
-            min_df=1,
-            sublinear_tf=True,    # log-normalise TF to dampen high-freq terms
-        )
-        tfidf_matrix = vectorizer.fit_transform(corpus)
-        query_vec = tfidf_matrix[0]
-        doc_vecs  = tfidf_matrix[1:]
-        return cosine_similarity(query_vec, doc_vecs)[0].tolist()
+        vec = TfidfVectorizer(sublinear_tf=True)
+        mat = vec.fit_transform(corpus)
+        return cosine_similarity(mat[0], mat[1:])[0].tolist()
     except Exception:
         return [0.0] * len(doc_texts)
 
 
-def _hybrid_score(
-    tfidf: float,
-    jaccard: float,
-    overlap: float,
-    w_tfidf: float  = 0.30,
-    w_jaccard: float = 0.35,
-    w_overlap: float = 0.35,
-) -> float:
+def _hybrid(word_overlap: float, fuzzy: float, tfidf: float) -> float:
     """
-    Weighted blend of three complementary signals.
-
-    Weights (must sum to 1.0):
-      - TF-IDF   0.30  – semantic / keyword similarity
-      - Jaccard  0.35  – symmetric set overlap (handles different-sized sets)
-      - Overlap  0.35  – asymmetric overlap (best when set sizes differ a lot)
+    Weighted blend:
+      50% word overlap  – most reliable signal for skill matching
+      30% fuzzy match   – handles typos and phrasing differences
+      20% TF-IDF        – smoothing / semantic signal
     """
-    return round(w_tfidf * tfidf + w_jaccard * jaccard + w_overlap * overlap, 4)
+    return round(0.50 * word_overlap + 0.30 * fuzzy + 0.20 * tfidf, 4)
 
 
 # ---------------------------------------------------------------------------
@@ -154,25 +145,21 @@ def recommend_opportunities(
     opportunities: list[dict],
     top_n: int = 10,
 ) -> list[dict]:
-    """Return the top-N opportunities best matching a volunteer's skill set."""
+    """Return top-N opportunities best matching a volunteer's skill set."""
     if not opportunities:
         return []
 
-    volunteer_text = _skills_to_text(volunteer_skills)
-    opp_texts = [
-        _skills_to_text(opp.get("requiredSkills", []))
-        for opp in opportunities
-    ]
-
-    tfidf_scores = _tfidf_scores(volunteer_text, opp_texts)
+    vol_text  = _skills_to_text(volunteer_skills)
+    opp_texts = [_skills_to_text(opp.get("requiredSkills", [])) for opp in opportunities]
+    tfidf     = _tfidf_score(vol_text, opp_texts)
 
     results = []
     for idx, opp in enumerate(opportunities):
         req = opp.get("requiredSkills", [])
-        j   = _jaccard_score(volunteer_skills, req)
-        ov  = _overlap_score(req, volunteer_skills)   # how many required skills the vol covers
-        score = _hybrid_score(tfidf_scores[idx], j, ov)
-        results.append({"id": opp["id"], "matchScore": score})
+        # For volunteer→opportunity: how much of the required words does the volunteer cover?
+        wo = _word_overlap_score(req, volunteer_skills)
+        fz = _fuzzy_skill_score(req, volunteer_skills)
+        results.append({"id": opp["id"], "matchScore": _hybrid(wo, fz, tfidf[idx])})
 
     results.sort(key=lambda x: x["matchScore"], reverse=True)
     return results[:top_n]
@@ -187,25 +174,21 @@ def recommend_volunteers(
     volunteers: list[dict],
     top_n: int = 10,
 ) -> list[dict]:
-    """Return the top-N volunteers best matching an opportunity's required skills."""
+    """Return top-N volunteers best matching an opportunity's required skills."""
     if not volunteers:
         return []
 
     opp_text  = _skills_to_text(required_skills)
-    vol_texts = [
-        _skills_to_text(vol.get("skills", []))
-        for vol in volunteers
-    ]
-
-    tfidf_scores = _tfidf_scores(opp_text, vol_texts)
+    vol_texts = [_skills_to_text(vol.get("skills", [])) for vol in volunteers]
+    tfidf     = _tfidf_score(opp_text, vol_texts)
 
     results = []
     for idx, vol in enumerate(volunteers):
         vol_skills = vol.get("skills", [])
-        j  = _jaccard_score(required_skills, vol_skills)
-        ov = _overlap_score(required_skills, vol_skills)  # what % of required skills vol has
-        score = _hybrid_score(tfidf_scores[idx], j, ov)
-        results.append({"id": vol["id"], "matchScore": score})
+        # How much of the required words does this volunteer cover?
+        wo = _word_overlap_score(required_skills, vol_skills)
+        fz = _fuzzy_skill_score(required_skills, vol_skills)
+        results.append({"id": vol["id"], "matchScore": _hybrid(wo, fz, tfidf[idx])})
 
     results.sort(key=lambda x: x["matchScore"], reverse=True)
     return results[:top_n]
@@ -225,22 +208,16 @@ def search_opportunities(
         return []
 
     opp_texts = [opp.get("text", "") for opp in opportunities]
-
-    # For free-text search we rely primarily on TF-IDF (word-level this time)
-    # since the query and opportunity text are already full sentences.
-    corpus = [query] + opp_texts
     try:
-        vectorizer = TfidfVectorizer(sublinear_tf=True)
-        tfidf_matrix = vectorizer.fit_transform(corpus)
-        query_vec = tfidf_matrix[0]
-        opp_vecs  = tfidf_matrix[1:]
-        scores = cosine_similarity(query_vec, opp_vecs)[0]
+        vec = TfidfVectorizer(sublinear_tf=True)
+        mat = vec.fit_transform([query] + opp_texts)
+        scores = cosine_similarity(mat[0], mat[1:])[0]
     except Exception:
         scores = [0.0] * len(opportunities)
 
-    results = []
-    for idx, opp in enumerate(opportunities):
-        results.append({"id": opp["id"], "matchScore": round(float(scores[idx]), 4)})
-
+    results = [
+        {"id": opp["id"], "matchScore": round(float(scores[idx]), 4)}
+        for idx, opp in enumerate(opportunities)
+    ]
     results.sort(key=lambda x: x["matchScore"], reverse=True)
     return results[:top_n]
