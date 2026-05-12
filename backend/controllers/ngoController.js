@@ -84,6 +84,7 @@ exports.getDashboardStats = async (req, res, next) => {
       return {
         _id: opp._id,
         title: opp.title,
+        requiredSkills: opp.requiredSkills || [],  // ← ADDED
         totalApplicants: total,
         accepted: counts.accepted,
         pending: counts.pending,
