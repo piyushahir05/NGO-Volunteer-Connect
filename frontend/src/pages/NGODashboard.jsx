@@ -98,7 +98,7 @@ function InviteButton({ vol, selectedEvent }) {
     setErrorMsg('');
     try {
       await api.post('/notifications/invite', {
-        volunteerId: vol.userId,   // the volunteer's User _id (returned by the ML endpoint)
+        volunteerId: vol.volunteerId,   // the volunteer's User _id (returned by the ML endpoint)
         opportunityId: selectedEvent._id,
         opportunityTitle: selectedEvent.title,
       });
